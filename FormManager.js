@@ -17,44 +17,7 @@ class FormManager {
     });
 		return data;
   }
-	
-	/**
-   * @desc Gets the `FormData` of a given form element
-   * @param {HTMLFormElement} formElement
-   * @param {Object} tableSettings
-   * @param {string|null} tableSettings.caption Add a string to the table caption. Optional
-   * @param {string} tableSettings.className Add a class name to the table. Optional
-   * @param {string} tableSettings.id Add an id to the table. Optional
-   * @returns {HTMLTableElement} A table element with the form data
-   */
-  static getFormDataTable(formElement, tableSettings = {}) {
-    const formData = FormManager.getFormData(formElement);
-    const tableElement = document.createElement("table");
-		
-    if (tableSettings.caption) {
-      const caption = document.createElement("caption");
-      caption.innerText = tableSettings.caption;
-      tableElement.appendChild(caption);
-    }
-    if (tableSettings.className) {
-      tableElement.className = tableSettings.className;
-    }
-    if (tableSettings.id) {
-      tableElement.id = tableSettings.id;
-    }
-    formData.forEach(field => {
-      const row = tableElement.insertRow();
-      const nameCell = row.insertCell(0);
-      const valueCell = row.insertCell(1);
-      const fieldIsInvalid = formElement.elements[field.name]?.validity?.valid === false;
-			
-      row.classList.toggle("is-invalid", fieldIsInvalid);
-      nameCell.innerText = field.name;
-      valueCell.innerText = field.value;
-    });
-		return tableElement;
-  }
-	
+
   /**
    * @desc Logs the `FormData` of a given form element to the console
    * @param {HTMLFormElement} formElement
@@ -335,4 +298,36 @@ class FormManager {
     }, new FormData());
   }
 
+  /**
+   * @desc Pass a form element and convert the Form Data to an object
+   * @param {HTMLFormElement} formElement 
+   */
+  static convertFormDataToObject(formElement) {
+    const formData = new FormData(formElement);
+    return [...formData.entries()].reduce((obj, [key, value]) => {
+      obj[key] = value;
+      return obj;
+    }, {});
+  }
+
+  /**
+   * @desc Initializes the defaultValue properties of form elements to match their current values
+   * @param {HTMLFormElement} formElement
+   */
+  static initializeDefaultValues(formElement) {
+    [...formElement.elements].forEach(element => {
+      element.defaultValue = element.value;
+    });
+  }
+
+  /**
+   * @desc Determines whether a form is "dirty" or "clean" by comparing the default values of the form elements to their current values
+   * @param {HTMLFormElement} formElement 
+   * @returns {boolean} `true` if the form is dirty, `false` if the form is clean
+   */
+  static isDirty(formElement) {
+    const allDefaultValues = [...formElement.elements].map(element => element.defaultValue == null ? "" : element.defaultValue);
+    const allCurrentValues = [...formElement.elements].map(element => element.value == null ? "" : element.value);
+    return !allDefaultValues.every((defaultValue, index) => defaultValue === allCurrentValues[index]);
+  }
 }
