@@ -4,17 +4,63 @@
  * @author Kayla Pratt
  */
 class FormManager {
-  /**
-   * @desc Logs the `FormData` of a given form element to the console
+	/**
+   * @desc Gets the `FormData` of a given form element
    * @param {HTMLFormElement} formElement
+	 * @returns {Object[]}
    */
-  static logFormData(formElement) {
+  static getFormData(formElement) {
     const formData = new FormData(formElement);
     const data = [];
     formData.forEach((value, name) => {
       data.push({ name, value });
     });
-    console.table(data);
+		return data;
+  }
+	
+	/**
+   * @desc Gets the `FormData` of a given form element
+   * @param {HTMLFormElement} formElement
+   * @param {Object} tableSettings
+   * @param {string|null} tableSettings.caption Add a string to the table caption. Optional
+   * @param {string} tableSettings.className Add a class name to the table. Optional
+   * @param {string} tableSettings.id Add an id to the table. Optional
+   * @returns {HTMLTableElement} A table element with the form data
+   */
+  static getFormDataTable(formElement, tableSettings = {}) {
+    const formData = FormManager.getFormData(formElement);
+    const tableElement = document.createElement("table");
+		
+    if (tableSettings.caption) {
+      const caption = document.createElement("caption");
+      caption.innerText = tableSettings.caption;
+      tableElement.appendChild(caption);
+    }
+    if (tableSettings.className) {
+      tableElement.className = tableSettings.className;
+    }
+    if (tableSettings.id) {
+      tableElement.id = tableSettings.id;
+    }
+    formData.forEach(field => {
+      const row = tableElement.insertRow();
+      const nameCell = row.insertCell(0);
+      const valueCell = row.insertCell(1);
+      const fieldIsInvalid = formElement.elements[field.name]?.validity?.valid === false;
+			
+      row.classList.toggle("is-invalid", fieldIsInvalid);
+      nameCell.innerText = field.name;
+      valueCell.innerText = field.value;
+    });
+		return tableElement;
+  }
+	
+  /**
+   * @desc Logs the `FormData` of a given form element to the console
+   * @param {HTMLFormElement} formElement
+   */
+  static logFormData(formElement) {
+    console.table(FormManager.getFormData(formElement));
   }
 
   /**
