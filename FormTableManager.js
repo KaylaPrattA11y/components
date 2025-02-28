@@ -1,45 +1,18 @@
-import FormManager from "./FormManager.js";
+import FormHelper from "./FormHelper";
+import { getFieldLabel, getFieldValue } from "./utilities";
 
 /**
- * @desc A class that provides methods for managing the form data table element
+ * @desc A class that provides methods for managing the form data table element, which displays the form field names, values, and validity states.
  * @class FormTableManager
- * @author Kayla Pratt
  */
-class FormTableManager {
-  /**
-   * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field 
-   * @returns {string} The text of the table header for the field. This is used to identify the field in the form data table.
-   */
-  static getFieldNameText(field) {
-    const fallbackLabel = field.name || field.id || "";
-    if (field instanceof RadioNodeList) {
-			const legendElement = field[0].closest("fieldset")?.querySelector("legend");
-      return legendElement ? legendElement.innerText : fallbackLabel;
-    } else {
-      if (field.hasAttribute("aria-labelledby")) {
-        const labelElement = document.getElementById(field.getAttribute("aria-labelledby"));
-        return labelElement ? labelElement.innerText : fallbackLabel;
-      }
-      if (field.hasAttribute("aria-label")) {
-        return field.getAttribute("aria-label");
-      }
-      if (field.id) {
-        return document.querySelector(`label[for="${field.id}"]`)?.innerText;
-      }
-      if (field.closest("label")) {
-        return field.closest("label").innerText;
-      }
-      return fallbackLabel;
-    }
-  }
-
+export default class FormTableManager {
   /**
    * @desc Updates the existing table's body with the latest form data
    * @param {HTMLFormElement} formElement
    * @param {HTMLTableElement} tableElement
    */
   static updateTableBody(formElement, tableElement) {
-    const formData = FormManager.getFormData(formElement);
+    const formData = FormHelper.getFormDataArray(formElement);
     const hasEditColumn = tableElement.dataset.hasEditColumn === "true";
     let tbody = tableElement.querySelector("tbody");
     
@@ -48,12 +21,18 @@ class FormTableManager {
     }
 		tbody = tableElement.createTBody();
     formData.forEach(field => {
+      const fieldElement = formElement.elements[field.name];
+      const doExclude = fieldElement.dataset?.excludeFromTable;
+      const rowAlreadyExists = tbody.querySelector(`tr[data-field-name="${field.name}"]`);
+      if (doExclude === "true" || rowAlreadyExists) return;
       const row = tbody.insertRow();
       const nameCell = row.insertCell(0);
       const valueCell = row.insertCell(1);
-      const fieldIsInvalid = formElement.elements[field.name]?.validity?.valid === false;
-      const fieldName = FormTableManager.getFieldNameText(formElement.elements[field.name]);
+      const fieldIsInvalid = fieldElement?.validity?.valid === false;
+      const fieldName = getFieldLabel(fieldElement);
+			const fieldValue = getFieldValue(fieldElement);
 
+      row.dataset.fieldName = field.name;
 			if (hasEditColumn) {
 				const editFieldCell = row.insertCell(2);
 				const editFieldAnchor = document.createElement("a");
@@ -64,7 +43,7 @@ class FormTableManager {
 			}
       row.classList.toggle("is-invalid", fieldIsInvalid);
       nameCell.innerText = fieldName;
-      valueCell.innerText = field.value;
+      valueCell.innerText = fieldValue;
     });
   }
 
@@ -78,7 +57,16 @@ class FormTableManager {
    * @param {boolean} tableSettings.hasEditColumn Add an edit button to the table. Default false
    * @returns {HTMLTableElement} A table element with the form data. 
    */
-  static generateTable(formElement, tableSettings = {id: null, className: null, caption: null, thead: false, hasEditColumn: false}) {
+  static generateTable(
+    formElement, 
+    tableSettings = {
+      id: null, 
+      className: null, 
+      caption: null, 
+      thead: false, 
+      hasEditColumn: false
+    }
+    ) {
     const tableElement = document.createElement("table");
     
     if (tableSettings.id) {
