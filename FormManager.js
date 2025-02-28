@@ -8,7 +8,7 @@ class FormManager {
    * @desc Logs the `FormData` of a given form element to the console
    * @param {HTMLFormElement} formElement
    */
-  static logData(formElement) {
+  static logFormData(formElement) {
     const formData = new FormData(formElement);
     const data = [];
     formData.forEach((value, name) => {
@@ -140,7 +140,7 @@ class FormManager {
    * @param {string[] | "badInput" | "customError" | "patternMismatch" | "rangeOverflow" | "rangeUnderflow" | "stepMismatch" | "tooLong" | "tooShort" | "typeMismatch" | "valueMissing"} validityState An array of validity states to filter the invalid fields by. Leave empty to log all invalid fields.
    * @param {boolean} excludeDisabledFields If true, excludes disabled fields from the list of invalid fields. Default is true.
    */
-  static logInvalidFormFieldsData(formElement, validityState = [], excludeDisabledFields = true) {
+  static logInvalidFieldsData(formElement, validityState = [], excludeDisabledFields = true) {
     console.table(FormManager.getInvalidFieldsData(formElement, validityState, excludeDisabledFields));
   }
 
