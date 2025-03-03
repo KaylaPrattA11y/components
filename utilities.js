@@ -1,5 +1,5 @@
 /**
- * @desc Attempts to find an appropriate label for the field using ARIA values. Falls back to the field's name or id if no label is found.
+ * @desc Attempts to find an appropriate label for the field using ARIA values
  * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field 
  * @returns {string}
  */
@@ -10,7 +10,7 @@ function getAriaLabel(field) {
   const ariaLabel = field.getAttribute("aria-label");
   
   if (ariaLabelledby && labelledbyElements) {
-    return labelledbyElements.map(element => element.innerText).join(", ");
+    return labelledbyElements.map(element => element.textContent).join(", ");
   }
   if (ariaLabel) {
     return field.getAttribute("aria-label");
@@ -19,7 +19,7 @@ function getAriaLabel(field) {
 }
 
 /**
- * @desc Gets the field's appropriate label most relevant to the user reading the data. Falls back to the field's name or id if no label is found.
+ * @desc Gets the field's appropriate label most relevant to the user reading the data. Falls back to the field's name or id if no label is found
  * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field 
  * @returns {string} 
  */
@@ -28,13 +28,16 @@ export function getFieldLabel(field) {
   const isRadio = field instanceof RadioNodeList;
   
   field = isRadio ? field[0] : field;
-  const legendElement = field.closest("fieldset")?.querySelector("legend");
+  const legendElement = field.closest("fieldset")?.querySelector(":scope > legend");
 
-  if (isRadio && legendElement) {
-    return legendElement.innerText;
+  if (field.name === "startTime") {
+    console.log("startTime", field);
   }
-  if (field.labels) {
-    return [...field.labels].map(label => label.innerText).join(", ");
+  if (isRadio && legendElement) {
+    return legendElement.textContent;
+  }
+  if (field.labels && field.labels.length > 0) {
+    return [...field.labels].map(label => label.textContent).join(", ");
   }
   return getAriaLabel(field) || fallbackLabel;
 }
@@ -53,7 +56,7 @@ export function getFieldValue(field) {
     const checkedRadios = [...field].filter(radio => radio.checked);
     return [...checkedRadios].map(radio => {
       const labels = [...radio.labels];
-      return labels.map(label => label.innerText).join(", ");
+      return labels.map(label => label.textContent).join(", ");
     });
   }
   if (isSelect) {

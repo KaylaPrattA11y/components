@@ -1,4 +1,4 @@
-import { FormHelper } from './FormHelper';
-import { FormTableManager } from './FormTableManager';
+import FormHelper from './FormHelper';
+import FormTable from './FormTable';
 
-export { FormHelper, FormTableManager };
+export { FormHelper, FormTable };
