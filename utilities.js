@@ -1,3 +1,6 @@
+import getUSD from "../../strings/getUSD";
+import getFormattedUnit from "../../strings/getFormattedUnit";
+
 /**
  * @desc Attempts to find an appropriate label for the field using ARIA values
  * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field 
@@ -16,6 +19,22 @@ function getAriaLabel(field) {
     return field.getAttribute("aria-label");
   }
   return null;
+}
+
+/**
+ * @desc Formats a number based on the provided format string. If no format is provided, it defaults to the US number format.
+ * @param {number} number 
+ * @param {string} format 
+ * @returns {string}
+ */
+export function numberFormatter(number, format) {
+  if (format === "currency") {
+    return getUSD(number, 0);
+  }
+  if (format === "number") {
+    return new Intl.NumberFormat("en-US").format(number);
+  }
+  return getFormattedUnit(number, format, "short");
 }
 
 /**

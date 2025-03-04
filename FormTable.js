@@ -1,6 +1,6 @@
 import { i18n, i18nReplace } from "js/translations";
 import FormHelper from "./FormHelper";
-import { getFieldLabel, getFieldValue } from "./utilities";
+import { getFieldLabel, getFieldValue, numberFormatter } from "./utilities";
 import { dataShow, dataHide } from "../../../v1.5/binding-utils";
 
 /**
@@ -60,16 +60,25 @@ export default class FormTable {
       const fieldElement = formElement.elements[field.name];
       const rowAlreadyExists = tbody.querySelector(`tr[data-field-name="${field.name}"]`);
       const isDisabledOrHidden = fieldElement?.disabled || fieldElement?.type === "hidden";
-      const doExclude = fieldElement.dataset?.excludeFormTable;
+      const doExclude = fieldElement.dataset?.formTableExclude;
+      const doSwapNameAndValue = fieldElement.dataset?.formTableSwapNameAndValue;
       if (rowAlreadyExists || isDisabledOrHidden || doExclude === "true") return;
 
       const row = tbody.insertRow();
       const nameCell = row.insertCell(0);
       const valueCell = row.insertCell(1);
       const fieldIsInvalid = fieldElement?.validity?.valid === false;
-      const fieldName = getFieldLabel(fieldElement);
-			const fieldValue = getFieldValue(fieldElement);
+      const doFormatNumber = fieldElement.dataset?.numberFormatter;
+      let fieldName = getFieldLabel(fieldElement);
+			let fieldValue = getFieldValue(fieldElement);
 
+      if (doFormatNumber) {
+        fieldValue = numberFormatter(fieldValue, doFormatNumber);
+      }
+      if(doSwapNameAndValue) {
+        fieldName = getFieldValue(fieldElement);
+        fieldValue = getFieldLabel(fieldElement);
+      }
       row.dataset.fieldName = field.name;
       row.classList.toggle("error-color", fieldIsInvalid);
       nameCell.className = "ts-body-2";
@@ -92,40 +101,31 @@ export default class FormTable {
    * @param {boolean} tableSettings.hasEditButtons Add an edit button to the table next to the current value. Default false
    * @returns {HTMLTableElement} A table element with the form data. 
    */
-  static generateTable(
-    formElement, 
-    tableSettings = {
-      id: null, 
-      className: null, 
-      caption: null, 
-      thead: false, 
-      hasEditButtons: false
-    }
-    ) {
+  static generateTable(formElement, { id, className,  caption,  thead = false,  hasEditButtons = false }) {
     const tableElement = document.createElement("table");
 
-    if (tableSettings.id) {
-      tableElement.id = tableSettings.id;
+    if (id) {
+      tableElement.id = id;
     }
-    if (tableSettings.className) {
-      tableElement.className = tableSettings.className;
+    if (className) {
+      tableElement.className = className;
     }
-    if (tableSettings.caption) {
-      const caption = tableElement.createCaption();
-      caption.innerText = tableSettings.caption;
-      caption.className = "ts-h3-aa mbe-xs";
+    if (caption) {
+      const captionElement = tableElement.createCaption();
+      captionElement.innerText = caption;
+      captionElement.className = "ts-h3-aa mbe-xs";
     }
-    if (tableSettings.thead) {
-      const thead = tableElement.createTHead();
-      const headerRow = thead.insertRow();
+    if (thead) {
+      const theadElement = tableElement.createTHead();
+      const headerRow = theadElement.insertRow();
       const nameHeader = headerRow.insertCell(0);
       const valueHeader = headerRow.insertCell(1);
       
-      thead.className = "ts-subtitle-2";
+      theadElement.className = "ts-subtitle-2";
       nameHeader.innerText = "Field Name";
       valueHeader.innerText = "Value";
     }
-    tableElement.dataset.hasEditButtons = tableSettings.hasEditButtons;
+    tableElement.dataset.hasEditButtons = hasEditButtons;
     FormTable.updateTableBody(formElement, tableElement);
     return tableElement;
   }
@@ -136,17 +136,17 @@ export default class FormTable {
    * @param {boolean} doEnable 
    */
   static enableReceiptMode(tableElement, doEnable = true) {
-    let tfoot = tableElement.querySelector("tfoot");
+    let tfootElement = tableElement.querySelector("tfoot");
     
     // If tfoot doesn't exist, create it
-    if (!tfoot) {
-      tfoot = tableElement.createTFoot();
-      const footerRow = tfoot.insertRow();
+    if (!tfootElement) {
+      tfootElement = tableElement.createTFoot();
+      const footerRow = tfootElement.insertRow();
       const footerCell = footerRow.insertCell(0);
       const printButton = document.createElement("button");
 
-      tfoot.dataset.show = "isReceiptMode";
-      tfoot.className = "text-center";
+      tfootElement.dataset.show = "isReceiptMode";
+      tfootElement.className = "text-center hide-for-print";
       printButton.type = "button";
       printButton.className = "btn-secondary icon-sm icon-download mis-xs";
       printButton.innerText = i18n("download");
