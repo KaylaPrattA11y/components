@@ -102,8 +102,13 @@ export default class FormTable {
    * @returns {HTMLTableElement} A table element with the form data. 
    */
   static generateTable(formElement, { id, className,  caption,  thead = false,  hasEditButtons = false }) {
-    const tableElement = document.createElement("table");
+    let tableElement = document.getElementById(id);
+    if (tableElement && tableElement instanceof HTMLTableElement) {
+      FormTable.updateTableBody(formElement, tableElement);
+      return tableElement;
+    }
 
+    tableElement = document.createElement("table");
     if (id) {
       tableElement.id = id;
     }
