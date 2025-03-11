@@ -1,5 +1,21 @@
 import getUSD from "../../strings/getUSD";
 import getFormattedUnit from "../../strings/getFormattedUnit";
+/**
+ * @desc Returns a string of the validity states that are true for the field (validation errors)
+ * @param {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} field 
+ * @returns {string} A string of the validity states that are true for the field (validation errors)
+ */
+export function validityStateToString(field) {
+  const array = [];
+  // It needs to be done this way to map ValidityState values
+  // eslint-disable-next-line no-restricted-syntax
+  for (const key in field.validity) {
+    if (field.validity[key] && key !== "valid") {
+      array.push(key);
+    }
+  }
+  return array.join(", ");
+}
 
 /**
  * @desc Attempts to find an appropriate label for the field using ARIA values
@@ -46,19 +62,17 @@ export function getFieldLabel(field) {
   const fallbackLabel = field.name || field.id || "";
   const isRadio = field instanceof RadioNodeList;
   
-  field = isRadio ? field[0] : field;
-  const legendElement = field.closest("fieldset")?.querySelector(":scope > legend");
+  const fieldElement = isRadio ? field[0] : field;
+  const legendElement = fieldElement.closest("fieldset")?.querySelector(":scope > legend");
+  const labelsHaveTextContent = [...fieldElement?.labels]?.some(label => label.textContent);
 
-  if (field.name === "startTime") {
-    console.log("startTime", field);
-  }
   if (isRadio && legendElement) {
     return legendElement.textContent;
   }
-  if (field.labels && field.labels.length > 0) {
-    return [...field.labels].map(label => label.textContent).join(", ");
+  if (fieldElement.labels && fieldElement.labels.length > 0 && labelsHaveTextContent) {
+    return [...fieldElement.labels].map(label => label.textContent).join(", ");
   }
-  return getAriaLabel(field) || fallbackLabel;
+  return getAriaLabel(fieldElement) || fallbackLabel;
 }
 
 /**

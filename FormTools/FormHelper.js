@@ -1,3 +1,6 @@
+/* eslint-disable no-console */
+import { validityStateToString } from "./utilities";
+
 /**
  * @desc A class that provides methods for managing and debugging forms and form elements
  * @class FormHelper
@@ -57,21 +60,39 @@ export default class FormHelper {
   }
 
   /**
-   * @desc Disable or enable all applicable form elements within the form or fieldset
+   * @desc Make all applicable form elements within the form or fieldset disabled
    * @param {HTMLFormElement | HTMLFieldSetElement} formElement The <form|fieldset> container
    * @param {boolean} doDisable default `true`
    */
   static disableAllElements(formElement, doDisable = true) {
-    if (formElement instanceof HTMLFieldSetElement) {
-      const fieldset = formElement;
-      fieldset.disabled = doDisable;
-    }
-    if (formElement && formElement.elements) {
-      Array.from(formElement.elements).forEach(element => {
-        const el = element;
-        el.disabled = doDisable;
-      });
-    }
+    const canBeDisabled = () => 
+      formElement instanceof HTMLFieldSetElement 
+      || formElement instanceof HTMLInputElement 
+      || formElement instanceof HTMLTextAreaElement 
+      || formElement instanceof HTMLSelectElement;
+    const filtered = [...formElement.elements].filter(element => canBeDisabled(element));
+
+    filtered.forEach(element => {
+      const el = element;
+      el.disabled = doDisable;
+    });
+  }
+
+  /**
+   * @desc Make all applicable form elements within the form or fieldset read-only
+   * @param {HTMLFormElement | HTMLFieldSetElement} formElement The <form|fieldset> container
+   * @param {boolean} doReadOnly default `true`
+   */
+  static makeAllElementsReadonly(formElement, doReadOnly = true) {
+    const canBeReadOnly = () => 
+      formElement instanceof HTMLInputElement 
+      || formElement instanceof HTMLTextAreaElement;
+    const filtered = [...formElement.elements].filter(element => canBeReadOnly(element));
+
+    filtered.forEach(element => {
+      const el = element;
+      el.readOnly = doReadOnly;
+    });
   }
 
   /**
@@ -122,23 +143,6 @@ export default class FormHelper {
   }
 
   /**
-   * @desc Returns a string of the validity states that are true for the field (validation errors)
-   * @param {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} field 
-   * @returns {string} A string of the validity states that are true for the field (validation errors)
-   */
-  static validityStateToString = field => {
-    const array = [];
-    // It needs to be done this way to map ValidityState values
-    // eslint-disable-next-line no-restricted-syntax
-    for (const key in field.validity) {
-      if (field.validity[key] && key !== "valid") {
-        array.push(key);
-      }
-    }
-    return array.join(", ");
-  }
-
-  /**
    * @desc Returns all invalid form elements, along with their names, values, and validation messages
    * @param {HTMLFormElement} formElement
    * @param {string[] | "badInput" | "customError" | "patternMismatch" | "rangeOverflow" | "rangeUnderflow" | "stepMismatch" | "tooLong" | "tooShort" | "typeMismatch" | "valueMissing"} validityState An array of validity states to filter the invalid fields by. Leave empty to log all invalid fields.
@@ -149,7 +153,7 @@ export default class FormHelper {
     return FormHelper.getInvalidFields(formElement, validityState, excludeDisabledFields).map(field => ({
       name: field.name,
       value: field.value,
-      validity: FormHelper.validityStateToString(field),
+      validity: validityStateToString(field),
       validationMessage: field.validationMessage,
     }));
   }
@@ -188,7 +192,7 @@ export default class FormHelper {
    * @returns {HTMLInputElement[] | HTMLSelectElement[] | HTMLTextAreaElement[]}
    */
   static getReadonlyFields(formElement) {
-    return [...formElement.elements].filter(element => element.readonly);
+    return [...formElement.elements].filter(element => element.readOnly);
   }
 
   /**
@@ -303,7 +307,8 @@ export default class FormHelper {
    */
   static initializeDefaultValues(formElement) {
     [...formElement.elements].forEach(element => {
-      element.defaultValue = element.value;
+      const el = element;
+      el.defaultValue = element.value;
     });
   }
 
@@ -316,5 +321,38 @@ export default class FormHelper {
     const allDefaultValues = [...formElement.elements].map(element => element.defaultValue == null ? "" : element.defaultValue);
     const allCurrentValues = [...formElement.elements].map(element => element.value == null ? "" : element.value);
     return !allDefaultValues.every((defaultValue, index) => defaultValue === allCurrentValues[index]);
+  }
+
+  /**
+   * @desc Populates a form element with data from an object
+   * @param {HTMLFormElement} formElement 
+   * @param {object} obj The object containing the data to populate the form fields with, ex: `{ firstName: "Julie", age: "31" }`
+   * @param {boolean} setAsDefaultValues If true, sets the default values of the form fields to the values in the data object. Default is true.
+   */
+  static populateFormFieldsWithObject(formElement, obj, setAsDefaultValues = true) {
+    Object.entries(obj).forEach(([key, value]) => {
+      const element = formElement.elements.namedItem(key);
+      const isRadio = element instanceof RadioNodeList;
+      const isSelect = element instanceof HTMLSelectElement;
+
+      if (!element) return;
+      if (isRadio) {
+        const radio = [...element].find(r => r.value === value);
+        if (radio) {
+          radio.checked = true;
+        }
+      } else if (isSelect) {
+        element.value = value;
+        const option = element.options[element.selectedIndex];
+        if (option) {
+          option.selected = true;
+        }
+      } else {
+        element.value = value;
+      }
+      if (setAsDefaultValues) {
+        element.defaultValue = value;
+      }
+    });
   }
 }
