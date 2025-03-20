@@ -1,7 +1,7 @@
+/* stylelint-disable scss/at-rule-no-unknown */
 .slides {
   &-container {
     --transition-duration: 500ms;
-    container: slides-container / inline-size;
     position: relative;
     overflow: hidden;
     &.has-nav-arrows {
@@ -10,6 +10,13 @@
     &.has-picker-dots {
       --dot-size: var(--icon-size-sm);
     }
+  }
+  &-stage.has-slide-overflow {
+    margin-inline: var(--gap-md);
+  }
+  &-stage:where(.has-animation-fade, .has-animation-slide:not(.has-slide-overflow)) .slides-slide {
+    opacity: 0;
+    visibility: hidden;
   }
   &-stage.has-animation-slide {
     --offset: calc(var(--active-slide-index, 0) * -100%);
@@ -21,18 +28,16 @@
   &-stage.has-animation-none .slides-slide.is-active {
     visibility: visible;
   }
-  &-stage:where(.has-animation-fade, .has-animation-none) .slides-slide {
+  &-stage:is(.has-animation-fade, .has-animation-none) .slides-slide {
     position: absolute;
   }
-  &-stage:where(.has-animation-fade, .has-animation-slide) .slides-slide {
-    opacity: 0;
-    visibility: hidden;
+  &-stage:is(.has-animation-fade, .has-animation-slide) .slides-slide {
     transition-timing-function: var(--transition-timing-function, ease);
     transition-duration: var(--slide-transition-duration, 750ms);
     transition-property: visibility, opacity, translate, position;
     transition-behavior: allow-discrete;
   }
-  &-stage:where(.has-animation-fade, .has-animation-slide) .slides-slide.is-active {
+  &-stage:is(.has-animation-fade, .has-animation-slide) .slides-slide.is-active {
     opacity: 1;
     visibility: visible;
     @starting-style {
@@ -51,15 +56,17 @@
     }
   }
   &-slide {
-    
     flex: 1 0 100%;
     align-self: flex-start;
     translate: var(--offset, 0);
   }
+  &-slide[aria-hidden="true"] {
+    pointer-events: none;
+  }
   &-arrow {
     font-size: var(--arrow-size);
-    transition: opacity var(--transition-duration);
     outline-offset: -2px;
+    transition: opacity var(--transition-duration);
     @include deviceMin(mobileMax) {
       --arrow-size: var(--icon-size-lg);
       position: absolute;
