@@ -1,9 +1,13 @@
 import getUSD from "../../strings/getUSD";
 import getFormattedUnit from "../../strings/getFormattedUnit";
+
 /**
- * @desc Returns a string of the validity states that are true for the field (validation errors)
- * @param {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} field 
- * @returns {string} A string of the validity states that are true for the field (validation errors)
+ * Checks the validity state of a form field and returns a comma-separated string
+ * listing all the validity properties that are currently true (indicating errors),
+ * excluding the "valid" property itself.
+ *
+ * @param {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} field - The input, select, or textarea field element to check.
+ * @returns {string} A comma-separated string of the validity states that are true (e.g., "valueMissing,typeMismatch"), or an empty string if the field is valid or only the "valid" property is true.
  */
 export function validityStateToString(field) {
   const array = [];
@@ -19,7 +23,7 @@ export function validityStateToString(field) {
 
 /**
  * @desc Attempts to find an appropriate label for the field using ARIA values
- * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field 
+ * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field
  * @returns {string}
  */
 function getAriaLabel(field) {
@@ -27,7 +31,7 @@ function getAriaLabel(field) {
   const labelledbyIds = ariaLabelledby?.split(" ");
   const labelledbyElements = labelledbyIds?.map(id => document.getElementById(id));
   const ariaLabel = field.getAttribute("aria-label");
-  
+
   if (ariaLabelledby && labelledbyElements) {
     return labelledbyElements.map(element => element.textContent).join(", ");
   }
@@ -39,8 +43,8 @@ function getAriaLabel(field) {
 
 /**
  * @desc Formats a number based on the provided format string. If no format is provided, it defaults to the US number format.
- * @param {number} number 
- * @param {string} format 
+ * @param {number} number
+ * @param {string} format
  * @returns {string}
  */
 export function numberFormatter(number, format) {
@@ -55,13 +59,13 @@ export function numberFormatter(number, format) {
 
 /**
  * @desc Gets the field's appropriate label most relevant to the user reading the data. Falls back to the field's name or id if no label is found
- * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field 
- * @returns {string} 
+ * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field
+ * @returns {string}
  */
 export function getFieldLabel(field) {
   const fallbackLabel = field.name || field.id || "";
   const isRadio = field instanceof RadioNodeList;
-  
+
   const fieldElement = isRadio ? field[0] : field;
   const legendElement = fieldElement.closest("fieldset")?.querySelector(":scope > legend");
   const labelsHaveTextContent = [...fieldElement?.labels]?.some(label => label.textContent);
@@ -77,8 +81,8 @@ export function getFieldLabel(field) {
 
 /**
  * @desc Gets the field's appropriate value (not the actual value per the `[value]` attribute) most relevant to the user reading the data. Falls back to the field's value attribute.
- * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field 
- * @returns {string} 
+ * @param {HTMLInputElement|RadioNodeList|HTMLTextAreaElement|HTMLSelectElement} field
+ * @returns {string}
  */
 export function getFieldValue(field) {
   const fallbackValue = field.value || "";
