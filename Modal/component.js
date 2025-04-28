@@ -1,42 +1,82 @@
-import { i18n } from "js/translations";
-import FocusTrap from "js/dom/FocusTrap";
+/* eslint-disable no-console */
+// import { i18n } from "js/translations";
+import { i18n } from "../../translations";
+import FocusTrap from "../../dom/FocusTrap";
 
 /**
- * @desc A modal dialog component
+ * @class Modal
+ * @classdesc A modal dialog component that supports various display styles, animations, and event handling.
+ * @see {@link https://ifleet-v2.dev.myfleetcard.net/style-guide/#modal}
  */
 export default class Modal {
   /**
-   * @param {string} settings.id ID of the `<dialog>` element. Required
-   * @param {function} settings.onClickOutside Function to call when the dialog is clicked outside. Optional
-   * @param {function} settings.onShow Function to call when the dialog is shown. Optional
-   * @param {function} settings.onClose Function to call when the dialog is closed. Optional
-   * @param {string} settings.maxWidth The max-width of the dialog. Default is set in the CSS
-   * @param {boolean} settings.hasCloseButton Whether the dialog has a close button (x). Default is `true`
-   * @param {string|"modal"|"offcanvas-right"|"offcanvas-left"} settings.variant A "modal" will display in the center of the screen. "offcanvas-right" will slide in from the right. "offcanvas-left" will slide in from the left. Default is "modal"
-   * @param {number} settings.animationSpeed The speed of the dialog animation in milliseconds. Default is `250`
-   * @param {string|"slide"|"fade"|"none"} settings.animationStyle The animation style of the dialog. Default is "slide". Other options are "fade" and "none"
-   * @param {boolean} settings.hasBackdrop Whether the dialog has a backdrop. Default is `true`
+   * Creates a modal instance.
+   * @param {Object} settings - Configuration options for the modal.
+   * @param {String} settings.id - The ID of the `<dialog>` element. Required.
+   * @param {Function} [settings.onClickOutside] - Callback when the modal is clicked outside.
+   * @param {Function} [settings.onShow] - Callback when the modal is shown.
+   * @param {Function} [settings.onClose] - Callback when the modal is closed.
+   * @param {String} [settings.maxWidth] - The max-width of the modal. Defaults to CSS settings.
+   * @param {Boolean} [settings.hasStickyCloseButton=true] - Whether the close button sticks to the top of the modal, following the user as they scroll
+   * @param {Boolean} [settings.hasCloseButton=true] - Whether the modal has a close button.
+   * @param {"modal"|"offcanvas-right"|"offcanvas-left"} [settings.variant="modal"] - Display style of the modal.
+   * @param {Number} [settings.animationSpeed=250] - Animation speed in milliseconds.
+   * @param {"slide"|"fade"|"none"} [settings.animationStyle="slide"] - Animation style.
+   * @param {Boolean} [settings.hasBackdrop=true] - Whether the modal has a backdrop.
    */
-  constructor({ id, onClickOutside, onShow, onClose, maxWidth, hasCloseButton = true, variant = "modal", animationSpeed = 250, animationStyle = "slide", hasBackdrop = true }) {
+  constructor({
+    id,
+    onClickOutside,
+    onShow,
+    onClose,
+    maxWidth,
+    hasStickyCloseButton = true,
+    hasCloseButton = true,
+    variant = "modal",
+    animationSpeed = 250,
+    animationStyle = "slide",
+    hasBackdrop = true,
+  }) {
+    /**  @type {String} */
     this.id = id;
-    this.dialog = document.getElementById(id);
+    /**  @type {Function|null} */
     this.onClickOutside = onClickOutside;
+    /**  @type {Function|null} */
     this.onShow = onShow;
+    /**  @type {Function|null} */
     this.onClose = onClose;
+    /**  @type {String|null} */
     this.maxWidth = maxWidth;
+    /**  @type {Boolean} */
+    this.hasStickyCloseButton = hasStickyCloseButton;
+    /**  @type {Boolean} */
     this.hasCloseButton = hasCloseButton;
+    /**  @type {String} */
     this.variant = variant;
+    /**  @type {Number} */
     this.animationSpeed = animationSpeed;
+    /**  @type {String} */
     this.animationStyle = animationStyle;
+    /**  @type {Boolean} */
     this.hasBackdrop = hasBackdrop;
 
     this.init();
   }
 
   /**
-   * @desc Initialize this modal by setting attributes, adding event listeners, and building its close button.
+   * Initialize this modal by setting attributes, adding event listeners, and building its close button.
    */
   init() {
+    if (this.alreadyInitialized) return; // Prevent re-initialization of the same modal
+    
+    /** @type {HTMLDialogElement} */
+    this.dialog = document.getElementById(this.id);
+
+    if (this.dialog && !(this.dialog instanceof HTMLDialogElement)) {
+      this.dialog.remove();
+    }
+
+    this.buildDialog();
     this.setAttributes();
     this.wrapInnerContentInDiv();
     this.buildCloseButton();
@@ -44,7 +84,20 @@ export default class Modal {
   }
 
   /**
-   * @desc Set the attributes and classes of this modal
+   * Build the dialog element if it doesn't already exist and appends it to the document's body
+   */
+  buildDialog() {
+    if (!this.dialog) {
+      const dialog = document.createElement("dialog");
+
+      dialog.id = this.id;
+      document.body.appendChild(dialog);
+      this.dialog = dialog;
+    }
+  }
+
+  /**
+   * Set the attributes and classes of this modal
    */
   setAttributes() {
     this.dialog.setAttribute("aria-modal", "true");
@@ -57,8 +110,7 @@ export default class Modal {
   }
 
   /**
-   * @desc Wrap the inner content of this modal in a div with the class `dialog-content`. This is critical for ensuring the modal's onClickOutside function works as expected
-   *
+   * Wrap the inner content of this modal in a div with the class `dialog-content`. This is critical for ensuring the modal's onClickOutside function works as expected
    */
   wrapInnerContentInDiv() {
     const div = document.createElement("div");
@@ -70,7 +122,7 @@ export default class Modal {
   }
 
   /**
-   * @desc Add event listeners to this modal
+   * Add event listeners to this modal
    */
   addEventListeners() {
     this.dialog.addEventListener("click", event => {
@@ -91,34 +143,64 @@ export default class Modal {
         })
       );
     });
-    this.dialog.addEventListener("Modal:shown", () => this.handleShown());
+    this.dialog.addEventListener("Modal:shown", event => this.handleShown(event));
   }
 
   /**
-   * @desc Build the close button for this modal
+   * Build the close button for this modal
    */
   buildCloseButton() {
     if (this.hasCloseButton) {
+      const buttonWrapper = document.createElement("div");
       const closeButton = document.createElement("button");
-      closeButton.classList.add("neo-dialog-close", "icon-sm", "icon-error-x", "btn-primary");
+      closeButton.className = "neo-dialog-close icon-error-x";
+      closeButton.classList.add(this.variant === "modal" ? "btn-default" : "btn-primary");
+      closeButton.classList.add(this.variant === "modal" ? "icon-md" : "icon-sm");
       closeButton.setAttribute("type", "button");
       closeButton.setAttribute("aria-label", i18n("close"));
       closeButton.setAttribute("aria-controls", this.id);
-      this.dialog.prepend(closeButton);
+      buttonWrapper.className = "neo-dialog-close-wrapper";
+      buttonWrapper.classList.toggle("is-sticky", this.hasStickyCloseButton);
+      this.dialog.prepend(buttonWrapper);
+      buttonWrapper.appendChild(closeButton);
+    }
+  }
+
+  /**
+   * Insert content into the modal's designated content area. This will replace any existing content.
+   * @param {String} id - ID of the target modal.
+   * @param {string|HTMLElement} contents - The content to insert.
+   */
+  static insertContent(id, contents) {
+    const dialog = document.getElementById(id);
+    const content = dialog.querySelector(".neo-dialog-content");
+
+    if (typeof contents === "string") {
+      content.innerHTML = contents;
+    } else {
+      content.innerHTML = "";
+      content.appendChild(contents);
     }
   }
 
   /**
    * @desc Handle what happens after the modal is shown
+   * @param {CustomEvent} event
+   * @param {HTMLDialogElement} event.detail.dialog
+   * @param {String} event.detail.id
+   * @param {String} event.detail.variant
+   * @param {HTMLElement} event.detail.toggleButton
    */
-  handleShown(dialog = this.dialog) {
+  handleShown(event) {
     if (this.onShow) {
-      this.onShow(dialog);
+      this.onShow(event.detail);
     }
   }
 
+
   /**
-   * @desc Handle what happens after the modal is closed
+   * Handle what happens after the modal is closed
+   * @param {HTMLDialogElement} [dialog=this.dialog] - The modal instance.
    */
   handleClosed(dialog = this.dialog) {
     if (Modal.isLocked(dialog)) return;
@@ -133,28 +215,32 @@ export default class Modal {
 
   /**
    * @desc Toggles the modal's visibility based on its current state
-   * @param {string} id
-   * @param {boolean} closeOthers If being opened, whether to close all other open modals. Default `true`
+   * @param {String} id
+   * @param {Boolean} [closeOthers=true] If being opened, whether to close all other open modals
+   * @param {HTMLElement} [toggleButton] The button that triggered the modal
    */
-  static toggle(id, closeOthers = true) {
+  static toggle(id, closeOthers = true, toggleButton = null) {
     if (Modal.isOpen(id)) {
       Modal.close(id);
     } else {
-      Modal.show(id, closeOthers);
+      Modal.show(id, closeOthers, toggleButton);
     }
   }
 
+
   /**
    * @desc Shows the modal by ID
-   * @param {string} id
-   * @param {boolean} closeOthers Whether to close all other open modals. Default `true`
+   * @param {String} id
+   * @param {Boolean} [closeOthers=true] Whether to close all other open modals
+   * @param {HTMLElement} [toggleButton] The button that triggered the modal
    */
-  static show(id, closeOthers = true) {
+  static show(id, closeOthers = true, toggleButton = null) {
     const dialog = document.getElementById(id);
 
     if (closeOthers) {
       Modal.closeAll();
     }
+    if (Modal.isOpen(id)) return;
     dialog.showModal();
     FocusTrap.start(dialog);
     document.body.style.overflowY = "hidden";
@@ -165,6 +251,7 @@ export default class Modal {
         detail: {
           id,
           dialog,
+          toggleButton,
           variant: dialog.classList[1]?.replace("is-", ""),
         },
       })
@@ -172,15 +259,16 @@ export default class Modal {
   }
 
   /**
-   * @desc Closes the modal by ID
-   * @param {string} id
+   * Closes the modal by ID
+   * @param {String} id - The modal ID.
+   * @param {Boolean} [forceClose=false] - Whether to force the modal to close regardless of state.
    */
-  static close(id) {
+  static close(id, forceClose = false) {
     const dialog = document.getElementById(id);
-    const animationSpeed = dialog.style.getPropertyValue("--animation-speed") || 250;
+    const animationSpeed = dialog.style.getPropertyValue("--animation-speed") || "250";
     const toMs = animationSpeed.replace(/[^\d]/g, "");
 
-    if (Modal.isLocked(dialog)) return;
+    if ((Modal.isLocked(dialog) && !forceClose) || !Modal.isOpen(id)) return;
     FocusTrap.stop(dialog);
     dialog.close();
     setTimeout(() => {
@@ -190,23 +278,24 @@ export default class Modal {
   }
 
   /**
-   * @desc Closes all open modals
+   * Closes all open modals
+   * @param {Boolean} [forceClose=false] - Whether to force close all modals.
    */
-  static closeAll() {
+  static closeAll(forceClose = false) {
     const openDialogs = document.querySelectorAll("dialog[open]");
-    openDialogs?.forEach(dialog => Modal.close(dialog.id));
+    openDialogs?.forEach(dialog => Modal.close(dialog.id, forceClose));
   }
 
   /**
-   * @param {string} id
-   * @returns {boolean} Whether the modal is currently open
+   * @param {String} id - The modal ID.
+   * @returns {Boolean} True if the modal is open.
    */
   static isOpen(id) {
     return document.getElementById(id).hasAttribute("open");
   }
 
   /**
-   * @returns {boolean} Whether any modals are open
+   * @returns {Boolean} Whether any modals are open
    */
   static anyOpen() {
     if (document.querySelector("dialog[open]")) {
@@ -216,17 +305,17 @@ export default class Modal {
   }
 
   /**
-   * @param {string} id
-   * @returns {boolean} Whether the modal is locked open, preventing it from being closed by the user.
+   * @param {String} id
+   * @returns {Boolean} Whether the modal is locked open, preventing it from being closed by the user.
    */
   static isLocked(id) {
     return id.getAttribute("data-locked") === "true";
   }
 
   /**
-   * @desc Whether to lock the modal open, preventing it from being closed by the user. Default is `true`
-   * @param {string} id
-   * @param {boolean} doLock
+   * Whether to lock the modal open, preventing it from being closed by the user. Default is `true`
+   * @param {String} id - The modal ID.
+   * @param {Boolean} [doLock=true] - Whether to lock (`true`) or unlock (`false`).
    */
   static lock(id, doLock = true) {
     const dialog = document.getElementById(id);
@@ -257,5 +346,13 @@ export default class Modal {
         },
       })
     );
+  }
+
+  /**
+   * Check if the modal has already been initialized. This is useful to prevent re-initialization of the same modal
+   * @return {Boolean} True if the modal has already been initialized, false otherwise
+   */
+  get alreadyInitialized() {
+    return !!this.dialog && this.dialog.classList.contains("neo-dialog");
   }
 }
