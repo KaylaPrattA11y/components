@@ -1,34 +1,46 @@
 import ARIA from "../../dom/aria";
 import debounce from "../../shared/debounce";
 import { i18n, i18nReplace } from "../../translations";
+import addSwipeListeners from "../../events/addSwipeListeners";
+
+const animationStyles = ["slide", "fade", "none"];
 
 /**
- * @desc A Slide Show (Carousel) component that enables the user to cycle through a series of content in a specific order.
- * @desc Built using the w3.org WAI-ARIA Authoring Practices guidelines for Carousels: https://www.w3.org/WAI/ARIA/apg/patterns/carousel/
+ * @typedef {Object} SlideShowData
+ * @property {HTMLLIElement} tallestSlide The tallest slide in the Slide Show
+ * @property {NodeListOf<HTMLLIElement>} slides The list of slides in the Slide Show
+ * @property {NodeListOf<HTMLButtonElement>} dots The list of picker dots in the Slide Show
+ * @property {HTMLLIElement} activeSlide The currently active slide in the Slide Show
+ * @property {Number} activeSlideIndex The index of the currently active slide in the Slide Show
+ * @property {HTMLButtonElement} activeDot The currently active dot in the Slide Show
+ * @property {Boolean} hasNoSlides Whether the Slide Show has no slides
+ * @property {Boolean} hasNoActiveSlide Whether the Slide Show has no active slide
+ * @property {Boolean} firstSlideIsActive Whether the first slide is currently active
+ * @property {Boolean} lastSlideIsActive Whether the last slide is currently active
+ * @property {Number} totalSlides The total Number of slides in the Slide Show
+ */
+
+/**
+ * @class SlideShow
+ * @classdesc A Slide Show (Carousel) component that enables the user to cycle through a series of content in a specific order. Built using the w3.org WAI-ARIA Authoring Practices guidelines for Carousels: 
+ * @link https://www.w3.org/WAI/ARIA/apg/patterns/carousel/
  */
 export default class SlideShow {
   /**
-   * @param {String} settings.id An ID for the Slide Show. Required
-   * @param {String} settings.label A (hidden) label for the Slide Show. Required
-   * @param {Function} settings.onSlide A callback function that fires when the Slide Show changes slides. Optional
-   * @param {String} settings.className A custom class to add to the Slide Show container. Optional
-   * @param {Boolean} settings.hasPicker A group of elements, often styled as small dots, that enable the user to pick a specific slide in the rotation sequence to display. Default true
-   * @param {Boolean} settings.hasNavArrows Interactive elements, often styled as arrows, that displays the prev/next slide in the rotation sequence. Default true
-   * @param {Boolean} settings.hasEqualSlideHeight Whether to equalize the height of the Slide Show container to the tallest slide, which prevents layout shift when changing slides. Default true
-   * @param {"slide"|"fade"|"none"} settings.animationStyle The animation style to use when changing slides. Default `"slide"`. Other options: `"fade"`, `"none"`
+   * @param {Object} settings The settings for the Slide Show
+   * @param {String} settings.id An ID for the Slide Show
+   * @param {String} settings.label A (hidden) label for the Slide Show
+   * @param {Function} [settings.onSlide] A callback Function that fires when the Slide Show changes slides
+   * @param {String} [settings.className=""] A custom class to add to the Slide Show container
+   * @param {Boolean} [settings.hasPicker=true] A group of elements, often styled as small dots, that enable the user to pick a specific slide in the rotation sequence to display
+   * @param {Boolean} [settings.hasNavArrows=true] Interactive elements, often styled as arrows, that displays the prev/next slide in the rotation sequence
+   * @param {Boolean} [settings.hasEqualSlideHeight=true] Whether to equalize the height of the Slide Show container to the tallest slide, which prevents layout shift when changing slides
+   * @param {"slide"|"fade"|"none"} [settings.animationStyle="slide"] The animation style to use when changing slides
+   * @param {Boolean} [settings.hasSlideOverflow=false] Whether the Slide Show should allow slides to overflow the container
    * @example new SlideShow({ id: "mySlideShow", label: "My Slide Show", hasPicker: true, hasNavArrows: false });
    */
-  constructor(settings) {
-    const {
-      id,
-      label,
-      onSlide,
-      className = "",
-      hasPicker = true,
-      hasNavArrows = true,
-      hasEqualSlideHeight = true,
-      animationStyle = "slide",
-    } = settings;
+  constructor({ id, label, onSlide, className = "", hasPicker = true, hasNavArrows = true, hasEqualSlideHeight = true, animationStyle = "slide", hasSlideOverflow = false }) {
+    /** @type {String} */
     this.id = id;
     this.label = label;
     this.onSlide = onSlide;
@@ -39,6 +51,7 @@ export default class SlideShow {
     this.hasNavArrows = hasNavArrows;
     this.hasEqualSlideHeight = hasEqualSlideHeight;
     this.animationStyle = animationStyle;
+    this.hasSlideOverflow = hasSlideOverflow;
     this.updateContainerHeight = this.updateContainerHeight.bind(this);
     this.resizeListener = this.resizeListener.bind(this);
 
@@ -53,7 +66,7 @@ export default class SlideShow {
    * @desc Initializes the Slide Show component
    */
   init() {
-    if (this.initialized || !this.validateStage() || !this.validateSlides()) return;
+    if (this.initialized || !this.validateSettings() || !this.validateStage() || !this.validateSlides()) return;
     this.build();
     this.addEventListeners();
     this.refreshUI();
@@ -66,7 +79,7 @@ export default class SlideShow {
   build() {
     this.setStageAttributes();
     this.buildContainer();
-    this.buildMobileHelperText();
+    this.buildHelperText();
     this.buildControls();
   }
 
@@ -89,10 +102,10 @@ export default class SlideShow {
   slideShowChangeEvent() {
     /**
      * @type {CustomEvent} The custom event
-     * @property {object} detail The event detail
+     * @property {Object} detail The event detail
      * @property {HTMLLIElement} detail.slide The active slide
      * @property {Number} detail.index The active slide index
-     * @property {Number} detail.totalSlides The total number of slides
+     * @property {Number} detail.totalSlides The total Number of slides
      * @property {Boolean} detail.firstSlideIsActive Whether the first slide is active
      * @property {Boolean} detail.lastSlideIsActive Whether the last slide is active
      */
@@ -122,6 +135,17 @@ export default class SlideShow {
     } else if (slide === "next") {
       this.activateSlide(this.activeSlideIndex + 1);
     }
+  }
+
+  /**
+   * @returns {Boolean} Whether the Slide Show has valid settings
+   */
+  validateSettings() {
+    if (!animationStyles.includes(this.animationStyle)) {
+      console.warn(`Invalid animation style "${this.animationStyle}" for Slide Show. Must be one of the following: ${animationStyles.join(", ")}`);
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -172,6 +196,7 @@ export default class SlideShow {
     const container = document.createElement("div");
 
     container.className = `slides-container ${this.className}`;
+    container.classList.toggle("has-picker-dots", this.hasPicker);
     container.setAttribute("role", "group");
     container.setAttribute("aria-roledescription", "carousel");
     container.setAttribute("aria-label", this.label);
@@ -185,12 +210,12 @@ export default class SlideShow {
   }
 
   /**
-   * @desc Builds the Slide Show mobile helper text to inform users to swipe to view more slides
+   * @desc Builds the Slide Show helper text to inform users to swipe to view more slides
    */
-  buildMobileHelperText() {
+  buildHelperText() {
     const p = document.createElement("p");
 
-    p.classList.add("ts-body-1", "text-center", "show-is-mobile-view");
+    p.className = "visually-hidden";
     p.textContent = i18n("swipeToViewMore");
     this.container?.appendChild(p);
 
@@ -204,7 +229,10 @@ export default class SlideShow {
    * @desc Builds the Slide Show controls container and its children (nav arrows and picker dots)
    */
   buildControls() {
-    if (!this.hasNavArrows && !this.hasPicker) return;
+    if (!this.hasNavArrows && !this.hasPicker) {
+      console.warn(`SlideShow "${this.label}" has no controls. Set "hasNavArrows" or "hasPicker" to true to enable controls.`);
+      return;
+    }
     const controls = document.createElement("nav");
 
     controls.classList.add("slides-controls", "text-center");
@@ -228,8 +256,7 @@ export default class SlideShow {
     if (!this.hasPicker) return;
     const picker = document.createElement("div");
 
-    this.container.classList.add("has-picker-dots");
-    picker.classList.add("slides-picker", "d-flex", "justify-content-center", "gap-xxs", "p-xxs");
+    picker.className = "slides-picker d-flex justify-content-center gap-xxs p-xxs";
     picker.setAttribute("role", "group");
     picker.setAttribute("aria-label", `${this.label}: ${i18n("slidePicker")}`);
     this.controls?.appendChild(picker);
@@ -265,7 +292,7 @@ export default class SlideShow {
    * @desc Builds the Slide Show navigational arrow buttons (prev/next)
    */
   buildNavArrows() {
-    if (!this.hasNavArrows) return;
+    if (!this.hasNavArrows || this.hasSlideOverflow) return;
     const prevButton = document.createElement("button");
     const nextButton = document.createElement("button");
 
@@ -291,8 +318,9 @@ export default class SlideShow {
    * @desc Sets the required attributes for the Slide Show stage element
    */
   setStageAttributes() {
-    this.stage?.setAttribute("role", "region");
-    this.stage?.classList.add("slides-stage", `has-animation-${this.animationStyle}`);
+    this.stage.setAttribute("role", "region");
+    this.stage.className = `slides-stage has-animation-${this.animationStyle}`;
+    this.stage.classList.toggle("has-slide-overflow", this.hasSlideOverflow);
   }
 
   /**
@@ -309,11 +337,11 @@ export default class SlideShow {
 
   /**
    * @desc Adds a slide to the Slide Show
-   * @param {object} settings
-   * @param {String} settings.innerHTML The content to display in the Slide Show slide. Required
-   * @param {String} settings.id An ID for the Slide Show slide. Must belong to a `<ol>` element. Required
-   * @param {Boolean} settings.isActive Whether the slide is the active slide. Default false
-   * @param {Number} settings.index The index at which to insert the slide. Default -1, which places it last
+   * @param {Object} settings The settings for the new Slide Show slide
+   * @param {String} settings.innerHTML The content to display in the Slide Show slide
+   * @param {String} settings.id An ID for the Slide Show slide. Must belong to a `<ol>` element
+   * @param {Boolean} [settings.isActive=false] Whether the slide is the active slide
+   * @param {Number} [settings.index=-1] The index at which to insert the slide. Using -1 will place it last
    * @example addSlide({ innerHTML: "<h2>Slide 1</h2>", id: "slide1", isActive: true, index: 0 });
    */
   addSlide(settings) {
@@ -342,7 +370,7 @@ export default class SlideShow {
 
   /**
    * @desc Removes a slide from the Slide Show
-   * @param {string | number} slide The slide to remove. Can be the slide ID or the slide index
+   * @param {String|Number} slide The slide to remove. Can be the slide ID or the slide index
    */
   destroySlide(slide) {
     const target = this.getSlide(slide);
@@ -354,7 +382,7 @@ export default class SlideShow {
 
   /**
    * @desc Activates the chosen slide from the Slide Show. Also activates the corresponding picker dot if applicable
-   * @param {string | number} slide The slide to activate. Can be the slide ID or the slide index
+   * @param {String|Number} slide The slide to activate. Can be the slide ID or the slide index
    */
   activateSlide(slide) {
     const target = this.getSlide(slide);
@@ -362,6 +390,9 @@ export default class SlideShow {
     // Updates all slides and dots to reflect the active slide
     this.slides?.forEach(s => {
       s.classList.toggle("is-active", s === target);
+      s.setAttribute("tabindex", s === target ? "0" : "-1");
+      s.setAttribute("aria-hidden", s !== target);
+      ARIA.makeUntabbable(s, s !== target);
     });
     this.dots?.forEach(d => {
       d.classList.toggle("is-active", d.getAttribute("aria-controls") === target?.id);
@@ -398,7 +429,7 @@ export default class SlideShow {
 
   /**
    * @desc Sets the minimum height of the Slide Show container to accommodate the current settings
-   * @param {Boolean} instantTransition Instantly update the height with no animation delay. Default false, which animates the height
+   * @param {Boolean} [instantTransition=false] Instantly update the height with no animation delay. Default false, which animates the height
    */
   updateContainerHeight(instantTransition = false) {
     const defaultDuration = getComputedStyle(this.container).getPropertyValue("--transition-duration");
@@ -455,31 +486,14 @@ export default class SlideShow {
    * @desc Adds swipe event listeners to the Slide Show to handle touch gestures
    */
   swipeListeners() {
-    const minX = 50; // Minimum swipe distance in pixels to trigger a swipe
-    let startX = 0;
-    let endX = 0;
-
-    /**
-     * @desc Determines the direction of the swipe
-     * @returns {string "LEFT" | "RIGHT" | null} The direction of the swipe
-     */
-    function getDirection() {
-      const totalDistance = Math.abs(endX - startX);
-      if (totalDistance < minX) return null;
-      return endX < startX ? "LEFT" : "RIGHT";
-    }
-
-    this.stage.addEventListener("touchstart", event => {
-      startX = event.changedTouches[0].screenX;
-    });
-
-    this.stage.addEventListener("touchend", event => {
-      endX = event.changedTouches[0].screenX;
-      if (getDirection() === "LEFT") {
+    addSwipeListeners({
+      element: this.stage,
+      onSwipeLeft: () => {
         this.activateSlide(this.activeSlideIndex + 1);
-      } else if (getDirection() === "RIGHT") {
+      },
+      onSwipeRight: () => {
         this.activateSlide(this.activeSlideIndex - 1);
-      }
+      },
     });
   }
 
@@ -493,7 +507,7 @@ export default class SlideShow {
 
   /**
    * @desc Retrieves the current state of the Slide Show
-   * @returns {object} The Slide Show data
+   * @returns {SlideShowData} The Slide Show data
    */
   get slideShowData() {
     return {
@@ -584,13 +598,13 @@ export default class SlideShow {
 
   /**
    * @desc Retrieves a slide element from the Slide Show
-   * @param {string | number} slide The slide to get. Can be the slide ID or the slide index
+   * @param {String|Number} slide The slide to get. Can be the slide ID or the slide index
    * @returns {HTMLLIElement} The slide
    */
   getSlide(slide) {
     if (typeof slide === "number") {
       if (slide > this.slides.length - 1) {
-        // Go to last slide if index is greater than the number of slides
+        // Go to last slide if index is greater than the Number of slides
         return this.slides[this.slides.length - 1];
       }
       if (slide < 0) {
