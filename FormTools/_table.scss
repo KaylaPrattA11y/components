@@ -1,0 +1,29 @@
+@layer components {
+  .table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+  .table :where(th, td) {
+    vertical-align: middle;
+    padding-block: var(--gap-xs);
+  }
+  .table.is-bordered {
+    tbody :where(th, td) {
+      border-block-end: 1px solid var(--ui-border-color);
+    }
+    thead :where(th, td) {
+      border-block-end: 2px solid var(--ui-border-color);
+    }
+  }
+  .table.is-striped tbody :where(th, td) {
+    padding: var(--gap-xs) var(--gap-xxs);
+  }
+  .table.is-striped tbody tr:nth-of-type(odd) :where(th, td) {
+    background-color: var(--gray100);
+  }
+  @media print {
+    .table {
+      page-break-inside: avoid;
+    }
+  }
+}

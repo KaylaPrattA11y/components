@@ -1,0 +1,61 @@
+@import "scss/abstracts/mixins";
+
+@layer utilities {
+  // Loading effects. See FormHelper.showFormLoading()
+  .form[aria-busy="true"] * {
+    &::before,
+    &::after {
+      content: none;
+    }
+  }
+  .form[aria-busy="true"] .input-split input {
+    display: none;
+  }
+  .form[aria-busy="true"] :where(input:not([type="checkbox"], [type="radio"]), select, textarea, .dselect-button, .input-split) {
+    color: transparent;
+    border-color: transparent;
+    @include skeleton(100%, auto, var(--form-control-border-radius));
+    &::placeholder {
+      color: transparent;
+    }
+  }
+  .form[aria-busy="true"] :where([type="checkbox"], [type="radio"]) {
+    appearance: none;
+    ~ label {
+      opacity: 0.5;
+    }
+  }
+  .form[aria-busy="true"] input[type="checkbox"] {
+    @include skeleton(var(--check-size), var(--check-size), var(--form-control-border-radius));
+  }
+  .form[aria-busy="true"] input[type="radio"] {
+    @include skeleton(var(--check-size), var(--check-size), 100%);
+  }
+  .form[aria-busy="true"] .switch-track {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: transparent;
+    cursor: wait;
+    animation: bgTo 1s linear infinite alternate;
+    &::after {
+      border-color: transparent;
+    }
+  }
+  .form[aria-busy="true"] .search-static {
+    @include skeleton(100%, auto, var(--ui-pill-radius));
+  }
+  .form--footer.is-sticky {
+    position: sticky;
+    inset: auto auto 0 0;
+    background: var(--white);
+    z-index: 1;
+    padding-block: var(--gap-sm);
+    border-block-start: 1px solid var(--ui-border-color);
+  }
+  .form--footer.is-flush {
+    --flush-offset: var(--gap-md);
+    padding-inline:  var(---flush-offset);
+    @include deviceMax(tabletSmallMin) {
+      --flush-offset: var(--gap-sm);
+    }
+  }
+}
