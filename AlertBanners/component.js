@@ -1,6 +1,5 @@
-/* eslint-disable import/no-unresolved */
-import ARIA from "js/dom/aria";
-import FocusTrap from "js/dom/FocusTrap";
+import ARIA from "../../dom/aria";
+import FocusTrap from "../../dom/FocusTrap";
 
 /**
  * @desc Deploy and dismiss banners at the top or bottom of the page using static methods or custom events.
