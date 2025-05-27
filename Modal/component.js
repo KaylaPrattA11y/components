@@ -2,6 +2,7 @@
 // import { i18n } from "js/translations";
 import { i18n } from "../../translations";
 import FocusTrap from "../../dom/FocusTrap";
+import addSwipeListeners from "../../events/addSwipeListeners";
 
 /**
  * @class Modal
@@ -19,7 +20,7 @@ export default class Modal {
    * @param {String} [settings.maxWidth] - The max-width of the modal. Defaults to CSS settings.
    * @param {Boolean} [settings.hasStickyCloseButton=true] - Whether the close button sticks to the top of the modal, following the user as they scroll
    * @param {Boolean} [settings.hasCloseButton=true] - Whether the modal has a close button.
-   * @param {"modal"|"offcanvas-right"|"offcanvas-left"} [settings.variant="modal"] - Display style of the modal.
+   * @param {"modal"|"offcanvas-right"|"offcanvas-left"|"drawer"} [settings.variant="modal"] - Display style of the modal. A modal is a full-screen dialog, while an offcanvas is a smaller dialog that slides in from the side (slide panel). A drawer is a smaller dialog that slides in from the bottom.
    * @param {Number} [settings.animationSpeed=250] - Animation speed in milliseconds.
    * @param {"slide"|"fade"|"none"} [settings.animationStyle="slide"] - Animation style.
    * @param {Boolean} [settings.hasBackdrop=true] - Whether the modal has a backdrop.
@@ -63,12 +64,16 @@ export default class Modal {
     this.init();
   }
 
+  /** @type {Boolean} Whether the modal has already been initialized */
+  alreadyInitialized =
+    document.getElementById(this.id) != null && document.getElementById(this.id).hasAttribute("aria-modal");
+
   /**
    * Initialize this modal by setting attributes, adding event listeners, and building its close button.
    */
   init() {
-    if (this.alreadyInitialized) return; // Prevent re-initialization of the same modal
-    
+    if (this.alreadyInitialized) return;
+
     /** @type {HTMLDialogElement} */
     this.dialog = document.getElementById(this.id);
 
@@ -81,6 +86,7 @@ export default class Modal {
     this.wrapInnerContentInDiv();
     this.buildCloseButton();
     this.addEventListeners();
+    this.alreadyInitialized = true;
   }
 
   /**
@@ -144,6 +150,15 @@ export default class Modal {
       );
     });
     this.dialog.addEventListener("Modal:shown", event => this.handleShown(event));
+    // Add a swipe down listener for drawer variant
+    if (this.variant === "drawer") {
+      addSwipeListeners({
+        element: this.dialog,
+        onSwipeDown: () => {
+          Modal.close(this.dialog.id);
+        },
+      });
+    }
   }
 
   /**
@@ -153,9 +168,14 @@ export default class Modal {
     if (this.hasCloseButton) {
       const buttonWrapper = document.createElement("div");
       const closeButton = document.createElement("button");
+      
       closeButton.className = "neo-dialog-close icon-error-x";
-      closeButton.classList.add(this.variant === "modal" ? "btn-default" : "btn-primary");
-      closeButton.classList.add(this.variant === "modal" ? "icon-md" : "icon-sm");
+      if (["offcanvas-right", "offcanvas-left"].includes(this.variant)) {
+        closeButton.classList.add("btn-primary", "icon-sm");
+      }
+      if (["drawer", "modal"].includes(this.variant)) {
+        closeButton.classList.add("btn-default", "icon-md");
+      }
       closeButton.setAttribute("type", "button");
       closeButton.setAttribute("aria-label", i18n("close"));
       closeButton.setAttribute("aria-controls", this.id);
@@ -197,7 +217,6 @@ export default class Modal {
     }
   }
 
-
   /**
    * Handle what happens after the modal is closed
    * @param {HTMLDialogElement} [dialog=this.dialog] - The modal instance.
@@ -226,7 +245,6 @@ export default class Modal {
       Modal.show(id, closeOthers, toggleButton);
     }
   }
-
 
   /**
    * @desc Shows the modal by ID
@@ -346,13 +364,5 @@ export default class Modal {
         },
       })
     );
-  }
-
-  /**
-   * Check if the modal has already been initialized. This is useful to prevent re-initialization of the same modal
-   * @return {Boolean} True if the modal has already been initialized, false otherwise
-   */
-  get alreadyInitialized() {
-    return !!this.dialog && this.dialog.classList.contains("neo-dialog");
   }
 }
