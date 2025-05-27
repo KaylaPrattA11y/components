@@ -3,7 +3,7 @@ import { validityStateToString } from "./utilities";
 
 /**
  * @typedef {Object} FormFieldData
- * @property {string} name - The name of the form field.
+ * @property {String} name - The name of the form field.
  * @property {FormDataEntryValue} value - The value of the form field (string or File).
  */
 
@@ -17,18 +17,18 @@ import { validityStateToString } from "./utilities";
 
 /**
  * @typedef {Object} InvalidFieldData
- * @property {string} name
- * @property {string} value
- * @property {string} validity
- * @property {string} validationMessage
+ * @property {String} name
+ * @property {String} value
+ * @property {String} validity
+ * @property {String} validationMessage
  */
 
 /**
  * @typedef {Object} FieldsetData
  * @property {HTMLFieldSetElement} element
  * @property {HTMLLegendElement | null} legend
- * @property {string | undefined} legendText
- * @property {boolean} invalid
+ * @property {String | undefined} legendText
+ * @property {Boolean} invalid
  */
 
 /**
@@ -50,13 +50,16 @@ export default class FormHelper {
    * Converts FormData from a form element into a simple key-value object.
    * Note: If multiple fields share the same name, the last value encountered by FormData typically wins.
    * @param {HTMLFormElement} formElement - The form element to process.
+   * @param {String[]} [excludeFields=[]] - An array of field names to exclude from the result.
    * @returns {{ [key: string]: FormDataEntryValue }} An object representing the form data.
    */
-  static getFormDataObject(formElement) {
+  static getFormDataObject(formElement, excludeFields = []) {
     const formData = new FormData(formElement);
     const data = {};
     formData.forEach((value, name) => {
-      if (data[name]) {
+      const fieldElement = formElement.elements.namedItem(name);
+      const doExclude = fieldElement.dataset?.formDataExclude;
+      if (data[name] && !excludeFields.includes(name) && doExclude !== "true") {
         // combine values if the name already exists
         data[name] = Array.isArray(data[name]) ? [...data[name], value] : [data[name], value];
       } else {
@@ -69,7 +72,7 @@ export default class FormHelper {
   /**
    * Gets an array of the names (keys) of all fields within the form's FormData.
    * @param {HTMLFormElement} formElement - The form element.
-   * @returns {string[]} An array containing the names of the form fields.
+   * @returns {String[]} An array containing the names of the form fields.
    */
   static getFormDataKeys(formElement) {
     const formData = new FormData(formElement);
@@ -123,7 +126,7 @@ export default class FormHelper {
   /**
    * Disables or enables the form's first submit button.
    * @param {HTMLFormElement} formElement - The form containing the submit button.
-   * @param {boolean} [doDisable=true] - Set to `true` to disable, `false` to enable. Defaults to `true`.
+   * @param {Boolean} [doDisable=true] - Set to `true` to disable, `false` to enable.
    * @returns {void}
    */
   static disableSubmit(formElement, doDisable = true) {
@@ -133,16 +136,16 @@ export default class FormHelper {
 
   /**
    * Disables or enables all applicable form elements (input, select, textarea, button, fieldset) within the given form or fieldset.
-   * @param {HTMLFormElement | HTMLFieldSetElement} formElement - The container element (<form> or <fieldset>).
-   * @param {boolean} [doDisable=true] - Set to `true` to disable, `false` to enable. Defaults to `true`.
+   * @param {HTMLFormElement | HTMLFieldSetElement} formElement - The container element (`<form>` or `<fieldset>`).
+   * @param {Boolean} [doDisable=true] - Set to `true` to disable, `false` to enable.
    * @returns {void}
    */
   static disableAllElements(formElement, doDisable = true) {
-    const canBeDisabled = () =>
-      formElement instanceof HTMLFieldSetElement ||
-      formElement instanceof HTMLInputElement ||
-      formElement instanceof HTMLTextAreaElement ||
-      formElement instanceof HTMLSelectElement;
+    const canBeDisabled = element =>
+      element instanceof HTMLFieldSetElement ||
+      element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement ||
+      element instanceof HTMLSelectElement;
     const filtered = [...formElement.elements].filter(element => canBeDisabled(element));
 
     filtered.forEach(element => {
@@ -153,8 +156,8 @@ export default class FormHelper {
 
   /**
    * Makes all applicable form elements (input, textarea) within the form or fieldset read-only or writable.
-   * @param {HTMLFormElement | HTMLFieldSetElement} formElement - The container element (<form> or <fieldset>).
-   * @param {boolean} [doReadOnly=true] - Set to `true` to make read-only, `false` to make writable. Defaults to `true`.
+   * @param {HTMLFormElement | HTMLFieldSetElement} formElement - The container element (`<form>` or `<fieldset>`).
+   * @param {Boolean} [doReadOnly=true] - Set to `true` to make read-only, `false` to make writable.
    * @returns {void}
    */
   static makeAllElementsReadonly(formElement, doReadOnly = true) {
@@ -171,7 +174,7 @@ export default class FormHelper {
    * Shows or hides a loading indicator state on the form's submit button.
    * Typically toggles a `data-is-busy` attribute and disables the button when shown.
    * @param {HTMLFormElement} formElement - The form containing the submit button.
-   * @param {boolean} [doShow=true] - Set to `true` to show the loader, `false` to hide it. Defaults to `true`.
+   * @param {Boolean} [doShow=true] - Set to `true` to show the loader, `false` to hide it.
    * @returns {void}
    */
   static showSubmitLoader(formElement, doShow = true) {
@@ -183,8 +186,8 @@ export default class FormHelper {
   /**
    * Shows or hides the form's loading state, typically by setting ARIA attributes and optionally adding CSS classes.
    * @param {HTMLFormElement} formElement - The form element to apply the loading state to.
-   * @param {boolean} [doShow=true] - Set to `true` to show loading state, `false` to hide. Defaults to `true`.
-   * @param {boolean} [useSpinner=false] - If true, indicates a spinner/mask style might be applied via CSS (`.js-is-busy` class). Defaults to `false`.
+   * @param {Boolean} [doShow=true] - Set to `true` to show loading state, `false` to hide.
+   * @param {Boolean} [useSpinner=false] - If true, indicates a spinner/mask will be applied to the form element
    * @returns {void}
    */
   static showFormLoading(formElement, doShow = true, useSpinner = false) {
@@ -200,7 +203,7 @@ export default class FormHelper {
    * Order of entries does not matter. Useful for checking if form state has changed.
    * @param {FormData} formData1 - The first FormData object.
    * @param {FormData} formData2 - The second FormData object.
-   * @returns {boolean} `true` if the FormData objects are effectively equal, `false` otherwise.
+   * @returns {Boolean} `true` if the FormData objects are effectively equal, `false` otherwise.
    */
   static formDataMatches(formData1, formData2) {
     const entries1 = [...formData1.entries()];
@@ -218,7 +221,7 @@ export default class FormHelper {
    * Finds and returns all form elements within a form that are currently invalid based on their validity state.
    * @param {HTMLFormElement} formElement - The form element to check.
    * @param {ValidityStateKey[]} [validityState=[]] - Optional array of specific validity state keys (e.g., `['valueMissing', 'typeMismatch']`). If provided, only fields matching one of these states are returned. Defaults to checking for any invalid state (`!validity.valid`).
-   * @param {boolean} [excludeDisabledFields=true] - If true, ignores disabled fields. Defaults to `true`.
+   * @param {Boolean} [excludeDisabledFields=true] - If true, ignores disabled fields.
    * @returns {FormControlElement[]} An array of invalid form control elements.
    */
   static getInvalidFields(formElement, validityState = [], excludeDisabledFields = true) {
@@ -236,7 +239,7 @@ export default class FormHelper {
    * Returns detailed data about invalid form fields, including name, value, validity state string, and validation message.
    * @param {HTMLFormElement} formElement - The form element to check.
    * @param {ValidityStateKey[]} [validityState=[]] - Optional array of validity states to filter by.
-   * @param {boolean} [excludeDisabledFields=true] - If true, ignores disabled fields. Defaults to `true`.
+   * @param {Boolean} [excludeDisabledFields=true] - If true, ignores disabled fields.
    * @returns {InvalidFieldData[]} An array of objects containing details about each invalid field.
    */
   static getInvalidFieldsData(formElement, validityState = [], excludeDisabledFields = true) {
@@ -252,7 +255,7 @@ export default class FormHelper {
    * Logs detailed data about invalid form fields to the console as a table.
    * @param {HTMLFormElement} formElement - The form element to check.
    * @param {ValidityStateKey[]} [validityState=[]] - Optional array of validity states to filter by.
-   * @param {boolean} [excludeDisabledFields=true] - If true, ignores disabled fields. Defaults to `true`.
+   * @param {Boolean} [excludeDisabledFields=true] - If true, ignores disabled fields.
    * @returns {void}
    */
   static logInvalidFieldsData(formElement, validityState = [], excludeDisabledFields = true) {
@@ -404,6 +407,25 @@ export default class FormHelper {
   }
 
   /**
+   * @param {HTMLFormElement} formElement - The form element.
+   * @param {String} fieldName - The name of the field to check.
+   * @returns {Boolean} `true` if the field's value has changed from its default value, `false` otherwise.
+   */
+  static fieldValueHasChanged(formElement, fieldName) {
+    const fieldElement = formElement.elements.namedItem(fieldName);
+
+    if (fieldElement instanceof HTMLSelectElement) {
+      const selected = fieldElement.options[fieldElement.selectedIndex];
+      return selected && selected.defaultSelected !== selected.selected;
+    }
+    if (fieldElement instanceof RadioNodeList) {
+      const checkedRadio = [...fieldElement].find(radio => radio.checked);
+      return checkedRadio && checkedRadio.defaultChecked !== checkedRadio.checked;
+    }
+    return fieldElement.value !== fieldElement.defaultValue;
+  }
+
+  /**
    * Sets the `defaultValue` property of each form element to match its current `value`.
    * Useful for establishing a baseline for "dirty" checking after initial population.
    * @param {HTMLFormElement} formElement - The form element.
@@ -423,41 +445,46 @@ export default class FormHelper {
           checkedRadio.defaultChecked = true;
         }
       } else {
-        el.defaultValue = element.value == null || element.value === "null" ? "" : element.value;
+        el.defaultValue = el.value == null || el.value === "null" ? "" : el.value;
       }
     });
+  }
+
+  /**
+   * @param {HTMLFormElement} formElement
+   * @param {Boolean} [getDefaultValues=false] - If true, returns the default values of the form elements; otherwise, returns their current values.
+   * @returns {String[]} An array of default values for each form element.
+   */
+  static getValues(formElement, getDefaultValues = false) {
+    const allValues = [...formElement.elements].map(element => {
+      if (element instanceof RadioNodeList) {
+        // For RadioNodeList, find the checked radio button's value for the defaultValue
+        const checkedRadio = [...element].find(radio => radio.checked);
+        if (checkedRadio) {
+          return getDefaultValues ? checkedRadio.defaultValue : checkedRadio.value;
+        }
+        return "";
+      }
+      if (getDefaultValues) {
+        return element.defaultValue == null || element.defaultValue === "null"
+          ? ""
+          : element.defaultValue || element.dataset.defaultValue;
+      }
+      return element.value == null || element.value === "null" ? "" : element.value;
+    });
+    return allValues;
   }
 
   /**
    * Determines if a form is "dirty" (changed from its default values).
    * Compares the current `value` of each element to its `defaultValue`.
    * @param {HTMLFormElement} formElement - The form element to check.
-   * @param {boolean} [logDifferences=false] - If true, logs the differing fields and their values to the console. Defaults to `false`.
-   * @returns {boolean} `true` if any element's value differs from its defaultValue, `false` otherwise.
+   * @param {Boolean} [logDifferences=false] - If true, logs the differing fields and their values to the console.
+   * @returns {Boolean} `true` if any element's value differs from its defaultValue, `false` otherwise.
    */
   static isDirty(formElement, logDifferences = false) {
-    const allDefaultValues = [...formElement.elements].map(element => {
-      if (element instanceof RadioNodeList) {
-        // For RadioNodeList, find the checked radio button's value for the defaultValue
-        const checkedRadio = [...element].find(radio => radio.checked);
-        if (checkedRadio) {
-          return checkedRadio.defaultValue;
-        }
-        return "";
-      }
-      return element.defaultValue == null || element.defaultValue === "null" ? "" : element.defaultValue;
-    });
-    const allCurrentValues = [...formElement.elements].map(element => {
-      if (element instanceof RadioNodeList) {
-        // For RadioNodeList, find the checked radio button's value
-        const checkedRadio = [...element].find(radio => radio.checked);
-        if (checkedRadio) {
-          return checkedRadio.value;
-        }
-        return "";
-      }
-      return element.value == null || element.value === "null" ? "" : element.value;
-    });
+    const allDefaultValues = FormHelper.getValues(formElement, true);
+    const allCurrentValues = FormHelper.getValues(formElement);
     const isDirty = !allDefaultValues.every((defaultValue, index) => defaultValue === allCurrentValues[index]);
 
     if (logDifferences) {
@@ -472,6 +499,34 @@ export default class FormHelper {
       console.table(diffMap.filter(Boolean));
     }
     return isDirty;
+  }
+
+  /**
+   * Checks a group of fields to see if any of them have identical values to another field in the group.
+   * @param {HTMLFormElement} formElement
+   * @param {String[]} fieldNameArray - An array of field names to check for identical values
+   * @returns {String[]} An array of field names that have identical values
+   * @example FormHelper.hasDuplicateValues(formElement, ["field1", "field2", "field3"])
+   */
+  static getFieldsWithIdenticalValues(formElement, fieldNameArray) {
+    const fieldValues = new Map();
+    const identicalFields = [];
+
+    fieldNameArray.forEach(fieldName => {
+      const fieldElement = formElement.elements.namedItem(fieldName);
+      if (fieldElement) {
+        const value = fieldElement.value.trim();
+        if (value) {
+          if (fieldValues.has(value)) {
+            identicalFields.push(fieldName);
+          } else {
+            fieldValues.set(value, fieldName);
+          }
+        }
+      }
+    });
+
+    return identicalFields;
   }
 
   /**
@@ -508,7 +563,7 @@ export default class FormHelper {
    * Handles inputs, textareas, selects, radio buttons, and potentially checkboxes (if value is an array).
    * @param {HTMLFormElement} formElement - The form element to populate.
    * @param {object} obj - An object where keys match form field names and values are the data to populate with (e.g., `{ firstName: "Julie", options: ["A", "C"] }`).
-   * @param {boolean} [setAsDefaultValues=true] - If true, also sets the `defaultValue` of the populated fields. Defaults to `true`.
+   * @param {Boolean} [setAsDefaultValues=true] - If true, also sets the `defaultValue` of the populated fields.
    * @returns {void}
    */
   static populateFormFieldsWithObject(formElement, obj, setAsDefaultValues = true) {
