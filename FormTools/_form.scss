@@ -1,6 +1,6 @@
 @import "scss/abstracts/mixins";
 
-@layer utilities {
+@layer components {
   // Loading effects. See FormHelper.showFormLoading()
   .form[aria-busy="true"] * {
     &::before,
@@ -11,7 +11,7 @@
   .form[aria-busy="true"] .input-split input {
     display: none;
   }
-  .form[aria-busy="true"] :where(input:not([type="checkbox"], [type="radio"]), select, textarea, .dselect-button, .input-split) {
+  .form[aria-busy="true"] :where(input:not([type="checkbox"], [type="radio"], .number-with-unit--input), select, textarea, .dselect-button, .input-split) {
     color: transparent;
     border-color: transparent;
     @include skeleton(100%, auto, var(--form-control-border-radius));
