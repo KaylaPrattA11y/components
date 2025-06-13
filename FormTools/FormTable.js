@@ -1,6 +1,5 @@
 import { i18nReplace } from "../../translations";
-import FormHelper from "./FormHelper";
-import { getFieldLabel, getFieldValue, numberFormatter } from "./utilities";
+import { getFieldLabel, getFieldValue, numberFormatter, getFormDataArray } from "./utilities";
 import { dataShow, dataHide } from "../../../v1.5/binding-utils";
 import highlightElement from "../../dom/highlightElement";
 
@@ -61,7 +60,7 @@ export default class FormTable {
    * @param {Object.<FormTableEntryMutator>} mutators An object of custom mutators to apply to individual field values/labels to change how they are displayed in the table. Default empty object
    */
   static updateTableBody(formElement, tableElement, mutators) {
-    const formData = FormHelper.getFormDataArray(formElement);
+    const formData = getFormDataArray(formElement);
     const hasEditButtons = tableElement.dataset.hasEditButtons === "true";
     let tbody = tableElement.querySelector("tbody");
 

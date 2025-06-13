@@ -71,10 +71,13 @@ export function getFieldLabel(field) {
   const labelsHaveTextContent = [...fieldElement?.labels]?.some(label => label.textContent);
 
   if (isRadio && legendElement) {
-    return legendElement.textContent;
+    return legendElement.textContent.trim();
   }
   if (fieldElement.labels && fieldElement.labels.length > 0 && labelsHaveTextContent) {
-    return [...fieldElement.labels].map(label => label.textContent).join(", ");
+    return [...fieldElement.labels]
+      .map(label => label.textContent)
+      .join(", ")
+      .trim();
   }
   return getAriaLabel(fieldElement) || fallbackLabel;
 }
@@ -101,4 +104,19 @@ export function getFieldValue(field) {
     return selectedOptions.map(option => option.label).join(", ");
   }
   return fallbackValue;
+}
+
+/**
+ * Converts FormData into an array of objects, each containing a field's name and value.
+ * Handles fields with the same name by creating separate entries for each.
+ * @param {HTMLFormElement} formElement - The form element.
+ * @returns {FormFieldData[]} An array of objects representing the form data entries.
+ */
+export function getFormDataArray(formElement) {
+  const formData = new FormData(formElement);
+  const data = [];
+  formData.forEach((value, name) => {
+    data.push({ name, value });
+  });
+  return data;
 }

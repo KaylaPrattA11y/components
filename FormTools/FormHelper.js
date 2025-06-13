@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { validityStateToString } from "./utilities";
+import { validityStateToString, getFormDataArray } from "./utilities";
 
 /**
  * @typedef {Object} FormFieldData
@@ -45,9 +45,63 @@ function consoleLogFormatter(formElement, message = "") {
   return console.log(`%cForm "${settings.formName}" ${message}`, settings.fontSize);
 }
 
+/**
+ * Trims whitespace from the beginning and end of a string value.
+ * Handles strings, arrays of strings (trimming each element), and object values (trimming string properties).
+ * @template T - The type of the value being passed (string, array, or object).
+ * @param {T} value - The value to trim.
+ * @returns {T} The value with string(s) trimmed. Note: Modifies objects and arrays in place if they contain strings.
+ */
+function trimValue(value) {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  if (Array.isArray(value)) {
+    return value.map(item => {
+      if (typeof item === "string") {
+        item.trim();
+      }
+      return item;
+    });
+  }
+  if (typeof value === "object" && value !== null) {
+    Object.entries(value).forEach(([key, item]) => {
+      if (typeof item === "string") {
+        value[key] = item.trim();
+      }
+    });
+  }
+  return value;
+}
+
+/**
+ * @param {HTMLFormElement} formElement
+ * @param {Boolean} [getDefaultValues=false] - If true, returns the default values of the form elements; otherwise, returns their current values.
+ * @returns {String[]} An array of default values for each form element.
+ */
+function getValues(formElement, getDefaultValues = false) {
+  const allValues = [...formElement.elements].map(element => {
+    if (element instanceof RadioNodeList) {
+      // For RadioNodeList, find the checked radio button's value for the defaultValue
+      const checkedRadio = [...element].find(radio => radio.checked);
+      if (checkedRadio) {
+        return getDefaultValues ? checkedRadio.defaultValue : checkedRadio.value;
+      }
+      return "";
+    }
+    if (getDefaultValues) {
+      return element.defaultValue == null || element.defaultValue === "null"
+        ? ""
+        : element.defaultValue || element.dataset.defaultValue;
+    }
+    return element.value == null || element.value === "null" ? "" : element.value;
+  });
+  return allValues;
+}
+
 export default class FormHelper {
   /**
-   * Converts FormData from a form element into a simple key-value object.
+   * Converts FormData into a simple key-value object.
    * Note: If multiple fields share the same name, the last value encountered by FormData typically wins.
    * @param {HTMLFormElement} formElement - The form element to process.
    * @param {String[]} [excludeFields=[]] - An array of field names to exclude from the result.
@@ -90,48 +144,36 @@ export default class FormHelper {
   }
 
   /**
-   * Converts FormData into an array of objects, each containing a field's name and value.
-   * Handles fields with the same name by creating separate entries for each.
-   * @param {HTMLFormElement} formElement - The form element.
-   * @returns {FormFieldData[]} An array of objects representing the form data entries.
-   */
-  static getFormDataArray(formElement) {
-    const formData = new FormData(formElement);
-    const data = [];
-    formData.forEach((value, name) => {
-      data.push({ name, value });
-    });
-    return data;
-  }
-
-  /**
    * Logs the `FormData` of a given form element to the console as a table.
    * @param {HTMLFormElement} formElement - The form element whose data should be logged.
    * @returns {void}
    */
   static logFormData(formElement) {
     consoleLogFormatter(formElement, "data:");
-    console.table(FormHelper.getFormDataArray(formElement));
+    console.table(getFormDataArray(formElement));
   }
 
   /**
-   * Finds the first submit button (`<button type="submit">`) within the form.
+   * Finds the submit button related to the form
    * @param {HTMLFormElement} formElement - The form element to search within.
-   * @returns {HTMLButtonElement | null} The submit button element, or null if not found.
+   * @returns {HTMLButtonElement|HTMLInputElement|null} The submit button element
    */
-  static getSubmit(formElement) {
-    return formElement?.querySelector("button[type=submit]");
+  static getSubmitButton(formElement) {
+    let button = formElement?.querySelector(":where(button[type=submit], input[type=submit])");
+    if (!button && formElement.id) {
+      button = document.querySelector(`:where(button[type=submit], input[type=submit])[form="${formElement.id}"]`);
+    }
+    return button;
   }
 
   /**
-   * Disables or enables the form's first submit button.
+   * Disables or enables the form's submit button(s).
    * @param {HTMLFormElement} formElement - The form containing the submit button.
    * @param {Boolean} [doDisable=true] - Set to `true` to disable, `false` to enable.
    * @returns {void}
    */
   static disableSubmit(formElement, doDisable = true) {
-    const submitButton = formElement?.querySelector("button[type=submit]");
-    submitButton?.toggleAttribute("disabled", doDisable);
+    FormHelper.getSubmitButton(formElement)?.toggleAttribute("disabled", doDisable);
   }
 
   /**
@@ -171,16 +213,15 @@ export default class FormHelper {
   }
 
   /**
-   * Shows or hides a loading indicator state on the form's submit button.
+   * Shows or hides a loading indicator state on the form's submit button(s).
    * Typically toggles a `data-is-busy` attribute and disables the button when shown.
    * @param {HTMLFormElement} formElement - The form containing the submit button.
    * @param {Boolean} [doShow=true] - Set to `true` to show the loader, `false` to hide it.
    * @returns {void}
    */
   static showSubmitLoader(formElement, doShow = true) {
-    const submitButton = formElement?.querySelector("button[type=submit]");
-    submitButton?.toggleAttribute("disabled", doShow);
-    submitButton?.toggleAttribute("data-is-busy", doShow);
+    FormHelper.getSubmitButton(formElement)?.toggleAttribute("disabled", doShow);
+    FormHelper.getSubmitButton(formElement)?.toggleAttribute("data-is-busy", doShow);
   }
 
   /**
@@ -433,6 +474,7 @@ export default class FormHelper {
    */
   static initializeDefaultValues(formElement) {
     [...formElement.elements].forEach(element => {
+      if (!element.name) return; // Skip elements without a name attribute
       const el = element;
       if (el instanceof HTMLSelectElement) {
         const selected = el.options[el.selectedIndex];
@@ -457,6 +499,7 @@ export default class FormHelper {
    */
   static getValues(formElement, getDefaultValues = false) {
     const allValues = [...formElement.elements].map(element => {
+      if (!element.name) return ""; // Skip elements without a name attribute
       if (element instanceof RadioNodeList) {
         // For RadioNodeList, find the checked radio button's value for the defaultValue
         const checkedRadio = [...element].find(radio => radio.checked);
@@ -483,9 +526,9 @@ export default class FormHelper {
    * @returns {Boolean} `true` if any element's value differs from its defaultValue, `false` otherwise.
    */
   static isDirty(formElement, logDifferences = false) {
-    const allDefaultValues = FormHelper.getValues(formElement, true);
-    const allCurrentValues = FormHelper.getValues(formElement);
-    const isDirty = !allDefaultValues.every((defaultValue, index) => defaultValue === allCurrentValues[index]);
+    const allDefaultValues = getValues(formElement, true);
+    const allCurrentValues = getValues(formElement);
+    const isDirty = allDefaultValues.some((defaultValue, index) => defaultValue !== allCurrentValues[index]);
 
     if (logDifferences) {
       const diffMap = allDefaultValues.map((defaultValue, index) => {
@@ -530,35 +573,6 @@ export default class FormHelper {
   }
 
   /**
-   * Trims whitespace from the beginning and end of a string value.
-   * Handles strings, arrays of strings (trimming each element), and object values (trimming string properties).
-   * @template T - The type of the value being passed (string, array, or object).
-   * @param {T} value - The value to trim.
-   * @returns {T} The value with string(s) trimmed. Note: Modifies objects and arrays in place if they contain strings.
-   */
-  static trimValue(value) {
-    if (typeof value === "string") {
-      return value.trim();
-    }
-    if (Array.isArray(value)) {
-      return value.map(item => {
-        if (typeof item === "string") {
-          item.trim();
-        }
-        return item;
-      });
-    }
-    if (typeof value === "object" && value !== null) {
-      Object.entries(value).forEach(([key, item]) => {
-        if (typeof item === "string") {
-          value[key] = item.trim();
-        }
-      });
-    }
-    return value;
-  }
-
-  /**
    * Populates form fields based on matching keys in a data object.
    * Handles inputs, textareas, selects, radio buttons, and potentially checkboxes (if value is an array).
    * @param {HTMLFormElement} formElement - The form element to populate.
@@ -572,7 +586,7 @@ export default class FormHelper {
       const element = formElement.elements.namedItem(key);
       const isRadio = element instanceof RadioNodeList;
       const isSelect = element instanceof HTMLSelectElement;
-      const trimmedValue = FormHelper.trimValue(value);
+      const trimmedValue = trimValue(value);
 
       if (!element) return;
       if (isRadio) {
