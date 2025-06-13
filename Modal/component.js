@@ -168,7 +168,6 @@ export default class Modal {
     if (this.hasCloseButton) {
       const buttonWrapper = document.createElement("div");
       const closeButton = document.createElement("button");
-      
       closeButton.className = "neo-dialog-close icon-error-x";
       if (["offcanvas-right", "offcanvas-left"].includes(this.variant)) {
         closeButton.classList.add("btn-primary", "icon-sm");

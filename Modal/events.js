@@ -11,9 +11,10 @@ export default function modalEventListeners() {
     const ariaControls = event.target.getAttribute("aria-controls");
     const targetEl = document.getElementById(ariaControls);
     const isDialog = targetEl instanceof HTMLDialogElement;
+    const isTabbed = targetEl?.classList.contains("is-tabbed"); // These have their own handlers
     const newModalOnly = targetEl?.classList.contains("neo-dialog"); // Only allow this to happen on new modals, not legacy ones. @TODO: remove this once all "Dialog" components are replaced.
 
-    if (ariaControls && targetEl && isDialog && newModalOnly) {
+    if (ariaControls && targetEl && isDialog && !isTabbed && newModalOnly) {
       Modal.toggle(ariaControls, true, event.target);
     }
   });
