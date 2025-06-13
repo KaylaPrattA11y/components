@@ -118,4 +118,126 @@
     inset: 0 0 auto auto;
     z-index: 1;
   }
+  // Tabbed Modal
+  &.is-tabbed {
+    overflow: visible;
+    .neo-dialog-content {
+      position: relative;
+      block-size: 100dvh;
+      background: var(--white);
+      overflow-y: auto;
+    }
+  }
+  &.is-tabbed.has-animation-slide:is(.is-offcanvas-left, .is-offcanvas-right) {
+    .neo-dialog-tablist {
+      transition-property: translate, display, overlay;
+      translate: var(--translate);
+    }
+    &[open] {
+      .neo-dialog-tablist {
+        translate: 0;
+        @starting-style {
+          translate: var(--translate);
+        }
+      }
+    }
+  }
+  .neo-dialog-tablist {
+    --min-tab-width: #{rem(65px)};
+    --min-tab-height: #{rem(70px)};
+    --tab-height: auto;
+    --tab-icon-size: var(--icon-size-sm);
+    display: flex;
+    background: var(--lightBlueGray);
+    overflow-x: auto;
+    transition-duration: calc(var(--animation-speed) * 1.5);
+  }
+  .neo-dialog-tablist button {
+    @include type-scale("body-2");
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-inline-size: var(--min-tab-width);
+    min-block-size: var(--min-tab-height);
+    inline-size: var(--tab-width);
+    block-size: var(--tab-height);
+    margin: 0;
+    padding: var(--gap-xs);
+    border: 0;
+  }
+  .neo-dialog-tablist button::before {
+    font-size: var(--tab-icon-size);
+  }
+  .neo-dialog-tablist button:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    background: var(--gray500);
+  }
+  .neo-dialog-tablist button:not(:last-child)::after {
+    inset: 50% 0 auto auto;
+    translate: 0 -50%;
+    width: 1px;
+    height: 75%;
+  }
+  .neo-dialog-tablist button[aria-selected="false"] {
+    color: var(--text-muted-color);
+  } 
+  .neo-dialog-tablist button[aria-selected="true"] {
+    background: var(--white);
+    cursor: default;
+    &::before {
+      color: var(--ui-active-color);
+    }
+  }
+  .neo-dialog-tablist button:disabled {
+    color: var(--text-disabled-color);
+    opacity: 0.75;
+    cursor: not-allowed;
+  } 
+  // sm and up
+  @include deviceMin(mobileMax) {
+    .neo-dialog-tablist {
+      --tablist-border-radius: var(--border-radius-md);
+      position: absolute;
+      overflow: hidden;
+    }
+    .neo-dialog-tablist[aria-orientation="horizontal"] {
+      --tab-width: #{rem(92px)};
+      --tab-height: #{rem(50px)};
+    }
+    .neo-dialog-tablist[aria-orientation="vertical"] {
+      --tab-width: #{rem(92px)};
+      --tab-height: #{rem(114px)};
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .neo-dialog-tablist[aria-orientation="vertical"] button:not(:last-child)::after {
+      inset: auto auto 0 50%;
+      translate: -50% 0;
+      width: 75%;
+      height: 1px;
+    }
+    &.is-tabbed.is-offcanvas-right .neo-dialog-tablist {
+      inset: var(--gap-sm) auto auto calc(var(--tab-width) * -1);
+    }
+    &.is-tabbed.is-offcanvas-left .neo-dialog-tablist {
+      inset: var(--gap-sm) calc(var(--tab-width) * -1) auto auto;
+    }
+    &.is-tabbed.is-offcanvas-right .neo-dialog-tablist {
+      border-top-left-radius: var(--tablist-border-radius);
+      border-bottom-left-radius: var(--tablist-border-radius);
+    }
+    &.is-tabbed.is-offcanvas-left .neo-dialog-tablist {
+      border-top-right-radius: var(--tablist-border-radius);
+      border-bottom-right-radius: var(--tablist-border-radius);
+    }
+    &.is-tabbed .neo-dialog-tablist[aria-orientation="horizontal"] {
+      border-top-left-radius: var(--tablist-border-radius);
+      border-top-right-radius: var(--tablist-border-radius);
+      inset: calc(var(--tab-width) * -1) auto auto;
+    }
+  }
 }
