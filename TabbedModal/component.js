@@ -1,3 +1,4 @@
+import isMobileView from "../../ui/isMobileView";
 import Modal from "../Modal";
 
 /**
@@ -9,10 +10,12 @@ export default class TabbedModal extends Modal {
   /**
    * @param {Object} settings
    * @param {Function} [settings.onSelectTab] Callback function to be called when a tab is selected
+   * @param {Boolean} [settings.hideTabs=false] Whether to hide the tab buttons. Useful if you want to have a modal with multiple sections that show/hide butt don't want the user to switch between them manually
    */
-  constructor({ onSelectTab, ...settings }) {
+  constructor({ onSelectTab, hideTabs = false, ...settings }) {
     super(settings); // Pass all settings to Modal
     this.onSelectTab = onSelectTab;
+    this.hideTabs = hideTabs;
     this.buildTablist();
     this.dialog.classList.add("is-tabbed");
   }
@@ -21,13 +24,11 @@ export default class TabbedModal extends Modal {
     const tablist = document.createElement("div");
 
     tablist.className = "neo-dialog-tablist";
+    tablist.classList.toggle("d-none", this.hideTabs);
     tablist.setAttribute("role", "tablist");
     tablist.setAttribute("aria-label", "Tabbed Modal Tab Group");
-    tablist.setAttribute(
-      "aria-orientation",
-      ["offcanvas-left", "offcanvas-right"].includes(this.variant) ? "vertical" : "horizontal"
-    );
-    tablist.id = `${this.id}Tabgroup`;
+    tablist.setAttribute("aria-orientation", this.orientation);
+    tablist.id = `${this.id}Tablist`;
     this.dialog.querySelector(".neo-dialog-content").insertAdjacentElement("beforebegin", tablist);
 
     /** @type {HTMLDivElement} The tablist containing all tab buttons */
@@ -40,12 +41,12 @@ export default class TabbedModal extends Modal {
    * @param {String} options.label The (brief) text in the tab button
    * @param {String} options.tabpanelId The ID of the tab panel that this tab button controls
    * @param {String} [options.iconName] The name of the icon to display on the tab button
-   * @param {String} [options.menuitem] The main menu item to associate with this tab button, if any
+   * @param {String} [options.applResource] The MDUI resource to associate with this tab button, if any
    * @param {Boolean} [options.isSelected=false] Whether this tab button should be selected by default
    * @param {Boolean} [options.isDisabled=false] Whether this tab button should be disabled
    * @param {Number} [options.position=-1] The position in the tablist to insert the tab button at. If -1, appends to the end
    */
-  addTab({ label, tabpanelId, iconName, menuitem, isSelected = false, isDisabled = false, position = -1 }) {
+  addTab({ label, tabpanelId, iconName, applResource, isSelected = false, isDisabled = false, position = -1 }) {
     if (this.getTab(tabpanelId)) return; // Prevent creation of duplicate tabs
     const tab = document.createElement("button");
     const tabpanel = document.getElementById(tabpanelId);
@@ -54,9 +55,9 @@ export default class TabbedModal extends Modal {
     if (iconName) {
       tab.classList.add(`icon-${iconName}`);
     }
-    if (menuitem) {
-      tab.setAttribute("data-menuitem", menuitem);
-      tabpanel.setAttribute("data-menuitem", menuitem);
+    if (applResource) {
+      tab.setAttribute("data-appl-resource", applResource);
+      tabpanel.setAttribute("data-appl-resource", applResource);
     }
     tab.setAttribute("role", "tab");
     tab.setAttribute("aria-selected", isSelected);
@@ -76,7 +77,8 @@ export default class TabbedModal extends Modal {
   }
 
   /**
-   * @param {HTMLButtonElement} tab The tab button element that was clicked
+   * @param {HTMLButtonElement} tab The tab button element that was
+   * @static
    */
   static tabClickHandler(tab) {
     const isSelected = tab.getAttribute("aria-selected") === "true";
@@ -116,6 +118,21 @@ export default class TabbedModal extends Modal {
 
     if (this.onSelectTab) {
       this.onSelectTab(this);
+    }
+  }
+
+  /**
+   * Selects the tab button corresponding to the given tab panel ID
+   * This is a static method that can be called without an instance of TabbedModal
+   * Does not trigger the `onSelectTab` callback
+   * @param {String} tabpanelId The ID of the tab panel for which to select the corresponding tab button
+   * @static
+   */
+  static selectTab(tabpanelId) {
+    const tab = document.querySelector(`button[aria-controls="${tabpanelId}"]`);
+
+    if (tab) {
+      TabbedModal.tabClickHandler(tab);
     }
   }
 
@@ -188,7 +205,7 @@ export default class TabbedModal extends Modal {
 
   /**
    * Gets the currently selected tab button
-   * @return {HTMLButtonElement} The currently selected tab button
+   * @returns {HTMLButtonElement} The currently selected tab button
    */
   get selectedTab() {
     return [...this.tablist.children].find(tab => tab.getAttribute("aria-selected") === "true");
@@ -196,9 +213,18 @@ export default class TabbedModal extends Modal {
 
   /**
    * Gets the currently selected tab panel element
-   * @return {HTMLElement} The currently selected tab panel element
+   * @returns {HTMLElement} The currently selected tab panel element
    */
   get selectedTabpanel() {
     return document.getElementById(this.selectedTab?.getAttribute("aria-controls"));
+  }
+
+  /**
+   * Determines the orientation of the tablist based on the modal variant and viewport size
+   * @returns {"horizontal"|"vertical"} The orientation of the tablist
+   */
+  get orientation() {
+    const isOffcanvas = ["offcanvas-left", "offcanvas-right"].includes(this.variant);
+    return isOffcanvas && !isMobileView() ? "vertical" : "horizontal";
   }
 }
