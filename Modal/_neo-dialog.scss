@@ -88,6 +88,7 @@
   &.is-drawer {
     --translate: 0 -100%;
     inset: auto auto 0 0;
+    max-block-size: 50dvh;
     border-top-left-radius: var(--border-radius-md);
     border-top-right-radius: var(--border-radius-md);
   }
@@ -111,23 +112,36 @@
   }
   &-close {
     position: absolute;
-    inset: calc(var(--padding) * 0.5) calc(var(--padding) * 0.5) auto auto;
+    inset: var(--padding) var(--padding) auto auto;
   }
   &-close-wrapper.is-sticky {
     position: sticky;
     inset: 0 0 auto auto;
+    z-index: 2;
+  }
+  &-content:has(.neo-dialog-header.is-sticky) {
+    padding-block-start: 0;
+  }
+  &-content:has(.neo-dialog-footer.is-sticky) {
+    padding-block-end: 0;
+  }
+  // Sticky header and footer
+  :where(.neo-dialog-header, .neo-dialog-footer).is-sticky {
+    position: sticky;
+    padding: var(--padding);
+    margin-inline: calc(var(--padding) * -1);
+    background: var(--white);
     z-index: 1;
   }
-  // Tabbed Modal
-  &.is-tabbed {
-    overflow: visible;
-    .neo-dialog-content {
-      position: relative;
-      block-size: 100dvh;
-      background: var(--white);
-      overflow-y: auto;
-    }
+  &-header.is-sticky {
+    top: 0;
+    border-block-end: 1px solid var(--ui-border-color);
   }
+  &-footer.is-sticky {
+    bottom: 0;
+    border-block-start: 1px solid var(--ui-border-color);
+  }
+  // Tabbed Modal
   &.is-tabbed.has-animation-slide:is(.is-offcanvas-left, .is-offcanvas-right) {
     .neo-dialog-tablist {
       transition-property: translate, display, overlay;
@@ -145,6 +159,7 @@
   .neo-dialog-tablist {
     --min-tab-width: #{rem(65px)};
     --min-tab-height: #{rem(70px)};
+    --tab-width: auto;
     --tab-height: auto;
     --tab-icon-size: var(--icon-size-sm);
     display: flex;
@@ -155,16 +170,13 @@
   .neo-dialog-tablist button {
     @include type-scale("body-2");
     position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-inline-size: var(--min-tab-width);
-    min-block-size: var(--min-tab-height);
-    inline-size: var(--tab-width);
-    block-size: var(--tab-height);
+    display: grid;
+    align-content: center;
+    inline-size: minmax(var(--min-tab-width), var(--tab-width));
+    block-size: minmax(var(--min-tab-height), var(--tab-height));
     margin: 0;
     padding: var(--gap-xs);
+    background: none;
     border: 0;
   }
   .neo-dialog-tablist button::before {
@@ -198,10 +210,29 @@
   } 
   // sm and up
   @include deviceMin(mobileMax) {
+    &.is-tabbed:is(.is-offcanvas-left, .is-offcanvas-right) {
+      overflow: visible;
+    }
+    &.is-tabbed:is(.is-offcanvas-left, .is-offcanvas-right) .neo-dialog-content {
+      position: relative;
+      block-size: 100dvh;
+      overflow-y: auto;
+    }
     .neo-dialog-tablist {
       --tablist-border-radius: var(--border-radius-md);
+    }
+    &.is-tabbed:is(.is-offcanvas-left, .is-offcanvas-right) .neo-dialog-tablist button {
+      inline-size: 100%;
+    }
+    &.is-tabbed:is(.is-offcanvas-left, .is-offcanvas-right) .neo-dialog-tablist {
+      --tablist-inset-top: var(--gap-sm);
       position: absolute;
-      overflow: hidden;
+      overflow-y: auto;
+      max-block-size: calc(100dvh - calc(var(--tablist-inset-top) * 2));
+      inline-size: var(--tab-width);
+    }
+    &.is-tabbed:is(.is-offcanvas-left, .is-offcanvas-right) .neo-dialog-tablist[aria-orientation="vertical"] button {
+      min-block-size: var(--tab-height);
     }
     .neo-dialog-tablist[aria-orientation="horizontal"] {
       --tab-width: #{rem(92px)};
@@ -221,10 +252,10 @@
       height: 1px;
     }
     &.is-tabbed.is-offcanvas-right .neo-dialog-tablist {
-      inset: var(--gap-sm) auto auto calc(var(--tab-width) * -1);
+      inset: var(--tablist-inset-top) auto auto calc(var(--tab-width) * -1);
     }
     &.is-tabbed.is-offcanvas-left .neo-dialog-tablist {
-      inset: var(--gap-sm) calc(var(--tab-width) * -1) auto auto;
+      inset: var(--tablist-inset-top) calc(var(--tab-width) * -1) auto auto;
     }
     &.is-tabbed.is-offcanvas-right .neo-dialog-tablist {
       border-top-left-radius: var(--tablist-border-radius);
