@@ -4,9 +4,11 @@
   display: grid;
   padding: 0;
   grid-template-rows: 0fr;
+  transition-behavior: allow-discrete;
   transition: 
     grid-template-rows var(--transition-duration),
-    padding-block var(--transition-duration);
+    padding-block var(--transition-duration),
+    position var(--transition-duration);
   &.is-deployed {
     grid-template-rows: 1fr;
   }
@@ -16,8 +18,14 @@
   }
   @each $status, $status-props in $statuses {
     &.is-#{$status} {
-      --status-color: #{status($status, "color")};
-      --status-background-color: #{status($status, "background-color")};
+      &:not(.is-anchored) {
+        --text-color: #{status($status, "color")};
+        --background-color: transparent;
+      }
+      &.is-anchored {
+        --text-color: var(--white);
+        --background-color: #{status($status, "color")};
+      }
       .inline-alerts--icon::before {
         align-self: start;
         @include status-icon($status, "sm");
@@ -25,22 +33,25 @@
     }
   }
   &--content {
-    display: grid;
-    grid-template-columns: auto auto;
-    justify-content: start;
-    gap: var(--gap-xxs);
     overflow: hidden;
     transition: 
       padding var(--transition-duration), 
       opacity var(--transition-duration);
   }
+  &.has-icon .inline-alerts--content {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    gap: var(--gap-xxs);
+  }
+  // Just plain text inserted with no HTML elements
+  &--message:not(:has(> *)) {
+    @include type-scale("body-2");
+  }
   &--message {
-    color: var(--status-color);
+    color: var(--text-color);
     a:not([class]) {
       @include button-variant("link");
-    }
-    :where(p,ul,ol,a):not([class]) {
-      @include type-scale("body-2");
     }
     > p:only-child {
       margin: 0;
@@ -52,55 +63,69 @@
       margin-block-end: 0;
     }
   }
-  &.has-arrow {
-    --arrow-size: #{rem(8px)};
+  &:not(.is-anchored) .inline-alerts--content :where(p,ul,ol,a):not([class]) {
+    @include type-scale("body-2");
+  }
+  &.is-anchored .inline-alerts--content :where(p,ul,ol,a):not([class]) {
+    @include type-scale("subtitle-1");
+  }
+  &.is-anchored {
+    --arrow-height: 16px; // Visual length of the arrow from base to tip
+    --arrow-width: 24px; // Visual width of the arrow
+    --arrow-border-width: 0 calc(var(--arrow-width) * 0.5) var(--arrow-height) calc(var(--arrow-width) * 0.5); // Appears 24px wide and 16px tall
+    position: absolute;
     padding: 0 var(--gap-sm);
-    background: var(--status-background-color);
-    border-radius: var(--border-radius-lg);
+    background: var(--background-color);
+    z-index: 2;
   }
-  &.has-arrow.is-deployed {
-    padding: var(--gap-sm);
+  &.is-anchored ::marker,
+  &.is-anchored ::before,
+  &.is-anchored :where(::marker, a, button, p, ul, ol) {
+    color: var(--text-color) !important;
   }
-  &.has-arrow.arrow-top {
-    margin-block-start: calc(var(--arrow-size) * 0.5);
+  &.is-anchored.is-deployed {
+    padding: var(--gap-sm); // Padding is applied when the alert is deployed so that it animates smoothly
   }
-  &.has-arrow.arrow-bottom {
-    margin-block-end: calc(var(--arrow-size) * 0.5);
+  &.is-anchored.is-anchored-top {
+   inset: 0 auto auto 0;
+   translate: 0 calc(-100% - var(--arrow-height));
   }
-  &.has-arrow.arrow-left {
-    margin-inline-start: calc(var(--arrow-size) * 0.5);
+  &.is-anchored.is-anchored-right {
+    inset: 50% 0 auto auto;
+    translate: calc(100% + var(--arrow-height)) -50%;
   }
-  &.has-arrow.arrow-right {
-    margin-inline-end: calc(var(--arrow-size) * 0.5);
+  &.is-anchored.is-anchored-bottom {
+    inset: auto auto 0 0;
+    translate: 0 calc(100% + var(--arrow-height));
   }
-  &.has-arrow::after {
+  &.is-anchored.is-anchored-left {
+    inset: 0 auto 0 0;
+    translate: calc(-100% - var(--arrow-height)) 0;
+  }
+  &.is-anchored::after {
     position: absolute;
     content: "";
     inline-size: 0; 
     block-size: 0;
-    border-width: var(--arrow-size);
+    border-width: 0;
     border-style: solid;
-    border-color: var(--border-color);
+    transition: border-width var(--transition-duration);
     z-index: 1;
   }
-  &.has-arrow.arrow-top::after {
-    inset: 0 auto auto 50%;
-    translate: -50% -100%;
-    --border-color: transparent transparent  var(--status-background-color) transparent;
-  }
-  &.has-arrow.arrow-bottom::after {
+  &.is-anchored.is-anchored-top::after {
     inset: auto auto 0 50%;
     translate: -50% 100%;
-    --border-color:  var(--status-background-color) transparent transparent transparent;
+    border-color: var(--background-color) transparent transparent transparent;
   }
-  &.has-arrow.arrow-left::after {
-    inset: 50% auto auto 0;
-    translate: -100% -50%;
-    --border-color: transparent  var(--status-background-color) transparent transparent;
+  &.is-anchored.is-anchored-top.is-deployed::after {
+    border-width: var(--arrow-height) calc(var(--arrow-width) * 0.5) 0 calc(var(--arrow-width) * 0.5);
   }
-  &.has-arrow.arrow-right::after {
-    inset: 50% 0 auto auto;
-    translate: 100% -50%;
-    --border-color: transparent transparent transparent  var(--status-background-color);
+  &.is-anchored.is-anchored-bottom::after {
+    inset: 0 0 auto 50%;
+    translate: -50% -100%;
+    border-color: transparent transparent var(--background-color) transparent;
+  }
+  &.is-anchored.is-anchored-bottom.is-deployed::after {
+    border-width: 0 calc(var(--arrow-width) * 0.5) var(--arrow-height) calc(var(--arrow-width) * 0.5);
   }
 }
