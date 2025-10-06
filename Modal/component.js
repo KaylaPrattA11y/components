@@ -133,7 +133,7 @@ export default class Modal {
   addEventListeners() {
     this.dialog.addEventListener("click", event => {
       if (this.onClickOutside && event.target === this.dialog) {
-        this.onClickOutside(this.dialog);
+        this.onClickOutside(this);
       }
     });
     this.dialog.addEventListener("close", () => {
@@ -165,6 +165,10 @@ export default class Modal {
    * Build the close button for this modal
    */
   buildCloseButton() {
+    const existingWrapper = this.dialog.querySelector(".neo-dialog-close-wrapper");
+    if (existingWrapper) {
+      existingWrapper.remove();
+    }
     if (this.hasCloseButton) {
       const buttonWrapper = document.createElement("div");
       const closeButton = document.createElement("button");
@@ -218,7 +222,7 @@ export default class Modal {
 
   /**
    * Handle what happens after the modal is closed
-   * @param {HTMLDialogElement} [dialog=this.dialog] - The modal instance.
+   * @param {HTMLDialogElement} [dialog=this.dialog] - The modal instance's dialog element.
    */
   handleClosed(dialog = this.dialog) {
     if (Modal.isLocked(dialog)) return;
