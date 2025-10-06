@@ -1,22 +1,28 @@
+import toSentenceCaseMulti from "js/utilities/toSentenceCase";
 import ARIA from "../../dom/aria";
-import FocusTrap from "../../dom/FocusTrap";
+import statusTypes from "../../ui/statusTypes";
+// eslint-disable-next-line no-unused-vars
+import InlineAlerts from "../InlineAlerts";
 
 /**
- * @desc Deploy and dismiss banners at the top or bottom of the page using static methods or custom events.
- * @see {@link https://ifleet-v2.dev.myfleetcard.net/style-guide/#alertBanners}
+ * @class AlertBanners
+ * @classdesc AlertBanners may only be deployed to one of two pre-determined locations on the page: the top or bottom.
+ * @see {@link https://driven-web.qat.fuels.fleetcor.co//style-guide/#alertBanners|Alert Banners} in the Developer pattern guide
+ * @note This is the correct class to use for alert banners. Do not use the dastardly doppelganger `AlertBanners` class located in `src/content/components/AlertBanner/component.js` that keeps rising like the Phoenix no matter how often we strike it down.
+ *
+ * @note If a message should need to be deployed to a specific location on the page, use the `InlineAlerts` class instead.
+ * @see {@link InlineAlerts} The class that should be used for deploying messages to specific locations on the page
  */
 export default class AlertBanners {
   /**
-   *
    * @param {Object} settings The settings for the alert banner
    * @param {String} settings.message
-   * @param {"top" | "bottom"} [settings.location="top"] The location to place the banner. Default is `"top"`
-   * @param {"success" | "trouble" | "error" | "featured" | "info" | "system"} [settings.type="info"] The type of the banner, which changes the color and icon
-   * @param {String} [settings.id=ARIA.generateUniqueID("alertBanner")] Strongly recommended to provide a unique id so that the banner can be dismissed by id
+   * @param {"top"|"bottom"} settings.location The location to place the banner. Default is `"top"`
+   * @param {"success"|"trouble"|"error"|"featured"|"info"|"system"} settings.type The type of the banner, which changes the color and icon
+   * @param {String} settings.id Strongly recommended to provide a unique id so that the banner can be dismissed by id
    * @returns {Boolean} Returns true if the settings are valid
    */
-  static validateSettings(settings) {
-    const { message, location, type, id } = settings;
+  static validateSettings({ message, location, type, id }) {
     let isValid = true;
 
     if (!message) {
@@ -30,13 +36,16 @@ export default class AlertBanners {
     if (!["top", "bottom"].includes(location)) {
       isValid = false;
       console.warn(
-        `AlertBanners.deploy() - "location" in the settings object must be one of the following: ${location.join(", ")}`
+        `AlertBanners.deploy() - "location" in the settings object must be one of the following: ${[
+          "top",
+          "bottom",
+        ].join(", ")}`
       );
     }
-    if (!["success", "trouble", "error", "featured", "info", "system"].includes(type)) {
+    if (!statusTypes.includes(type)) {
       isValid = false;
       console.warn(
-        `AlertBanners.deploy() - "type" in the settings object must be one of the following: ${type.join(", ")}`
+        `AlertBanners.deploy() - "type" in the settings object must be one of the following: ${statusTypes.join(", ")}`
       );
     }
     return isValid;
@@ -54,7 +63,7 @@ export default class AlertBanners {
    * @param {String} [settings.id=ARIA.generateUniqueID("alertBanner")] Strongly recommended to provide a unique id so that the banner can be dismissed by id
    * @param {Number} [settings.duration=0] The duration to display the banner in seconds. Default is infinite. Value range of `1`-`9` is not allowed due to the fact that it fails WCAG 2.2 AA compliance (https://www.w3.org/WAI/WCAG22/Understanding/enough-time.html), in which case, the duration will automatically be infinite
    * @param {"top" | "bottom"} [settings.location="top"] The location to place the banner. Default is `"top"`
-   * @param {Boolean} [settings.removeOthers=false] If true, dismisses all other banners before deploying the new one
+   * @param {Boolean} [settings.removeOthers=false] Deprecated. This setting will do nothing because deploying a banner will remove the previous banner. If you want to remove all banners, use `AlertBanners.dismissAll(<"top"|"bottom">)` instead.
    * @example AlertBanners.deploy({
    * message: "<p>Do you want to drop the Sector 7 Plate?</p>",
    * id: "exampleBanner",
@@ -65,7 +74,6 @@ export default class AlertBanners {
    * dismissible: true,
    * duration: 0,
    * location: "top",
-   * removeOthers: false,
    * });
    */
   static deploy({
@@ -78,30 +86,31 @@ export default class AlertBanners {
     location = "top",
     type = "info",
     dismissible = true,
-    removeOthers = false,
   }) {
     if (!AlertBanners.validateSettings({ message, location, type })) return;
     let banner = document.getElementById(id);
     if (id != null && banner && banner.classList.contains("alert-banners--item")) {
-      banner.remove();
+      return; // If the banner already exists, do not deploy it again
     }
     const container = document.getElementById(`${location}AlertBanners`);
+    if (!container) {
+      return; // If the container does not exist, do not deploy the banner
+    }
     const template = document.getElementById("alertBannerTemplate");
     const clone = document.importNode(template.content, true);
     banner = clone.querySelector(`[data-alert-banner="item"]`);
     const bannerMessage = clone.querySelector(`[data-alert-banner="message"]`);
+    const bannerIcon = clone.querySelector(`[data-alert-banner="icon"]`);
     const bannerControls = clone.querySelector(`[data-alert-banner="controls"]`);
     const bannerDismiss = clone.querySelector("button[data-alert-banner='dismiss']");
     const bannerCTA = clone.querySelector("button[data-alert-banner='cta']");
     const hasCTA = actionCallback && actionText;
 
-    if (removeOthers) {
-      AlertBanners.dismissAll(location);
-    }
     banner.id = id;
-    banner.setAttribute("role", hasCTA ? "alertdialog" : "alert");
-    banner.classList.add(`${type}-bg`);
-    bannerMessage.innerHTML = message;
+    banner.setAttribute("role", "alert");
+    banner.classList.add(`is-${type}`);
+    banner.setAttribute("data-dismissible", dismissible);
+    bannerMessage.innerHTML = toSentenceCaseMulti(message);
     bannerControls.classList.toggle("hidden", !dismissible && !hasCTA);
     bannerDismiss.addEventListener("click", () => AlertBanners.dismiss(banner.id));
     bannerDismiss.classList.toggle("hidden", !dismissible);
@@ -113,10 +122,15 @@ export default class AlertBanners {
       bannerCTA.textContent = actionText;
       bannerCTA.addEventListener("click", actionCallback);
       bannerCTA.classList.remove("hidden");
+    } else {
+      // Remove the CTA button if not provided
+      bannerCTA.remove();
     }
-    container.appendChild(banner);
-    if (hasCTA) {
-      FocusTrap.start(banner);
+    // Clear the banner's previous content
+    container.innerHTML = "";
+    if (location === "bottom") {
+      // Remove the icon for bottom banners as they are not needed
+      bannerIcon.remove();
     }
     if (duration !== 0) {
       if (duration > 9) {
@@ -126,6 +140,14 @@ export default class AlertBanners {
         setTimeout(() => AlertBanners.dismiss(banner.id), 10000);
       }
     }
+    container.appendChild(banner);
+    setTimeout(() => {
+      banner.classList.add("is-deployed");
+      banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      if (hasCTA) {
+        bannerCTA.focus();
+      }
+    }, 50);
     banner.dispatchEvent(new CustomEvent("AlertBanners:deployed", { bubbles: true, detail: { id: banner.id } }));
   }
 
@@ -136,9 +158,16 @@ export default class AlertBanners {
    */
   static dismiss(id) {
     const banner = document.getElementById(id);
+
     if (banner) {
-      banner.remove();
-      banner.dispatchEvent(new CustomEvent("AlertBanners:dismissed", { bubbles: true, detail: { id } }));
+      const transitionDuration = banner.style.getPropertyValue("--transition-duration");
+      const duration = parseInt(transitionDuration?.replace(/\D/g, ""), 10) || 250; // default to 250ms if not set
+
+      banner.classList.remove("is-deployed");
+      setTimeout(() => {
+        banner.dispatchEvent(new CustomEvent("AlertBanners:dismissed", { bubbles: true, detail: { id } }));
+        banner.remove();
+      }, duration);
     }
   }
 
@@ -153,7 +182,18 @@ export default class AlertBanners {
     if (["top", "bottom"].includes(location)) {
       container = document.getElementById(`${location}AlertBanners`);
     }
-    container.querySelectorAll(`[data-alert-banner="item"]`)?.forEach(banner => AlertBanners.dismiss(banner.id));
-    document.dispatchEvent(new CustomEvent("AlertBanners:dismissedAll", { bubbles: true, detail: { location } }));
+    if (container) {
+      container.querySelectorAll(`[data-alert-banner="item"]`)?.forEach(banner => AlertBanners.dismiss(banner.id));
+      document.dispatchEvent(new CustomEvent("AlertBanners:dismissedAll", { bubbles: true, detail: { location } }));
+    }
   }
 }
+
+/**
+ * PageAlerts may only be deployed to one of two pre-determined locations on the page: the top or bottom.
+ * @alias AlertBanners
+ * @see {@link AlertBanners} The class that this is an alias for
+ * @note If a message should need to be deployed to a specific location on the page, use the `InlineAlerts` class instead.
+ * @see {@link InlineAlerts} The class that should be used for deploying messages to specific locations on the page
+ */
+export const PageAlerts = AlertBanners;
