@@ -1,87 +1,153 @@
 .alert-banners {
-  --max-width: #{rem(1199px)};
   display: block;
-  color: var(--white);
-  overflow: hidden;
-  z-index: 9999;
-  // Page with sidebar and large screen
-  @at-root body.has-sidebar .alert-banners.is-top {
-    inset: 0 0 auto;
-    margin-inline: var(--gap-sm);
-    @include deviceMin(tabletSmallMax) {
-      inset: 0 0 auto calc(var(--side-bar-width) + var(--side-bar-gap));
-      margin-inline: 0 var(--container-inline-end-padding);
-    }
+  inline-size: 100%;
+  // Top Banners: Special width for pre-auth pages (register, login, etc.), adds a gap on each side
+  @at-root body.auth-fail .alert-banners.is-top {
+    inline-size: calc(100% - var(--gap-sm) * 2);
   }
-  // Page with no sidebar
-  @at-root body:not(.has-sidebar) .alert-banners.is-top {
-    inset: 0 var(--gap-sm) auto var(--gap-sm);
-    margin-inline: auto;
-    inline-size: calc(100% - calc(var(--gap-sm) * 2));
-    max-inline-size: var(--max-width);
-  }
-  @at-root body:not(.has-sidebar) .alert-banners.is-bottom {
-    inline-size: 100%;
-  }
-  // Hide the bottom banners if the mobile menu is shown
+  // Bottom Banners: Hide if the mobile menu is shown
   @at-root .show-mobile-menu ~ .alert-banners.is-bottom {
     display: none;
   }
-  :where(a, button) {
-    @include type-scale("body-1");
-    color: var(--white);
-    text-decoration: underline;
-    padding: 0;
-    background: none;
-    border: 0;
-    appearance: none;
-  }
+  // Top banner is fixed to the top on small screens
   &.is-top {
-    position: fixed;
-    border-bottom-right-radius: var(--border-radius-sm);
-    border-bottom-left-radius: var(--border-radius-sm);
-    box-shadow: var(--shadow-md);
+    max-inline-size: var(--container-max-width, 100%);
+    // sm screens
+    @include deviceMax(mobileMax) {
+      inline-size: calc(100% - calc(var(--gap-sm) * 2));
+      position: fixed;
+      inset: 0 auto auto var(--gap-sm);
+      z-index: 9999;
+      .alert-banners--item {
+        box-shadow: var(--shadow-md);
+      }
+    }
   }
+  &.is-top .alert-banners--item {
+    --ab-text-color: var(--text-color);
+    --transition-duration: 250ms;
+    position: relative;
+    display: grid;
+    padding: 0 var(--gap-sm);
+    margin-block: 0;
+    grid-template-rows: 0fr;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: 
+      grid-template-rows var(--transition-duration),
+      padding-block var(--transition-duration),
+      margin-block var(--transition-duration);
+    &.is-deployed {
+      grid-template-rows: 1fr;
+      padding-block: var(--gap-sm);
+      margin-block: var(--gap-xs);
+    }
+    @each $status, $status-props in $statuses {
+      &.is-#{$status} {
+        --status-background-color: #{status($status, "background-color")};
+        .alert-banners--icon::before {
+          align-self: start;
+          @include status-icon($status, "sm");
+        }
+      }
+    }
+  }
+  // Bottom banner is always stuck to the bottom of the viewport
   &.is-bottom {
+    inline-size: 100%;
     position: sticky;
     inset: auto 0 0;
     box-shadow: var(--shadow-md-inverted);
+    z-index: 9999;
+  }
+  &.is-bottom .alert-banners--item {
+    --ab-text-color: var(--white);
+    padding: var(--gap-sm) var(--gap-md);
+    @each $status, $status-props in $statuses {
+      &.is-#{$status} {
+        --status-background-color: #{status($status, "color")};
+      }
+    }
   }
   &.is-bottom .alert-banners--content {
-    max-inline-size: var(--max-width);
+    align-items: center;
+    max-inline-size: var(--container-max-width);
   }
-  &--item:not(:last-of-type) {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  &.is-bottom .alert-banners--message {
+    text-align: center;
   }
+  &.is-bottom .alert-banners--cta {
+    color: var(--ab-text-color);
+  }
+  &--item {
+    color: var(--ab-text-color);
+    background-color: var(--status-background-color);
+  }
+  // Contains icon, message, and controls
   &--content {
-    padding: var(--gap-sm) var(--gap-md);
+    position: relative;
+    display: grid;
+    gap: var(--gap-xs);
+    grid-template-columns: auto 1fr max-content;
+    inline-size: 100%;
     margin-inline: auto;
-    @include deviceMin(mobileMax) {
-      display: grid;
-      grid-template-columns: 1fr max-content;
-      align-items: center;
-    }
-  }
-  &--controls {
-    display: flex;
-    gap: var(--gap-sm);
-    align-items: flex-start;
+    overflow: hidden;
+    // sm screens
     @include deviceMax(mobileMax) {
-      margin-block-start: var(--gap-sm);
-      padding-block-start: var(--gap-sm);
-      border-block-start: 1px solid var(--white);
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-      text-decoration: underline;
+      grid-template-areas: 
+        "icon message"
+        "controls controls";
+      .alert-banners--controls {
+        grid-column: 2;
+      }
+      .alert-banners--close {
+        position: absolute;
+        inset: 0 0 auto auto;
+      }
     }
+    grid-template-areas: 
+      "icon message controls";
   }
-  &--message > *:first-child {
-    margin-block-start: 0;
+  &--icon {
+    grid-area: icon;
   }
-  &--message > *:last-child {
-    margin-block-end: 0;
+  // Contains CTA and close button
+  &--controls {
+    grid-area: controls;
+    display: flex;
+    align-items: start;
+    gap: var(--gap-xs);
+  }
+  &--cta {
+    @include type-scale("body-1");
+    @include button-variant("link");
+    padding: 0;
+    border: 0;
+  }
+  // Non-standard icon size
+  &--close::before {
+    font-size: 1.5rem;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+  // Just plain text inserted with no HTML elements
+  &--message:not(:has(> *)) {
+    @include type-scale("body-2");
   }
   &--message {
-    @include type-scale("body-1");
+    grid-area: message;
+    margin-inline-end: var(--gap-md);
+    :where(p,ul,ol,a):not([class]) {
+      @include type-scale("body-2");
+    }
+    > p:only-child {
+      margin: 0;
+    }
+    > p:not(:only-child):first-child {
+      margin-block-start: 0;
+    }
+    > p:not(:only-child):last-child {
+      margin-block-end: 0;
+    }
   }
 }
